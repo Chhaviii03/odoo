@@ -74,10 +74,20 @@ export const auditsService = {
     });
   },
 
-  async verifyItem(itemId: string, input: any, actorId: string) {
+  async verifyItem(itemId: string, input: any, actorId: string, actorRole?: string) {
     const item = await prisma.auditItem.findUnique({ where: { id: itemId }, include: { auditCycle: true } });
     if (!item) throw ApiError.notFound('Audit item not found');
     if (item.auditCycle.status === 'CLOSED') throw ApiError.badRequest('Audit cycle is closed');
+
+    // Only managers or auditors assigned to this cycle may verify items.
+    const isManager = actorRole === 'ADMIN' || actorRole === 'ASSET_MANAGER';
+    if (!isManager) {
+      const assignment = await prisma.auditAssignment.findFirst({
+        where: { auditCycleId: item.auditCycleId, auditorEmployeeId: actorId },
+      });
+      if (!assignment) throw ApiError.forbidden('Only assigned auditors or managers can verify items in this cycle');
+    }
+
     const updated = await prisma.auditItem.update({
       where: { id: itemId },
       data: { verificationStatus: input.verificationStatus, notes: input.notes, verifiedById: actorId, verifiedAt: new Date() },
