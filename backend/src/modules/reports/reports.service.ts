@@ -1,28 +1,70 @@
 import { prisma } from '../../lib/prisma.js';
 
 export const reportsService = {
-  // Utilization: allocation count per asset + currently allocated share.
+  // Utilization: allocation + booking counts per asset.
   async utilization() {
     const assets = await prisma.asset.findMany({
       select: {
         id: true, assetTag: true, name: true, status: true,
-        _count: { select: { allocations: true, bookings: true } },
+        _count: {
+          select: {
+            allocations: true,
+            bookings: { where: { status: { not: 'CANCELLED' } } },
+          },
+        },
       },
     });
     const ranked = assets
-      .map((a) => ({ ...a, usage: a._count.allocations + a._count.bookings }))
+      .map((a) => ({
+        id: a.id,
+        assetTag: a.assetTag,
+        name: a.name,
+        status: a.status,
+        usage: a._count.allocations + a._count.bookings,
+      }))
       .sort((x, y) => y.usage - x.usage);
+
     return {
-      mostUsed: ranked.slice(0, 10),
-      idle: ranked.filter((a) => a.usage === 0),
+      mostUsed: ranked.filter((a) => a.usage > 0).slice(0, 10),
+      idle: ranked.filter(
+        (a) => a.usage === 0 && !['RETIRED', 'DISPOSED'].includes(a.status),
+      ),
     };
   },
 
+  // Department-wise allocation summary: owned assets + allocations
+  // (direct department target OR employee's department).
   async byDepartment() {
     const departments = await prisma.department.findMany({
-      select: { id: true, name: true, _count: { select: { assets: true, allocations: true } } },
+      select: {
+        id: true,
+        name: true,
+        _count: { select: { assets: true } },
+      },
+      orderBy: { name: 'asc' },
     });
-    return departments.map((d) => ({ id: d.id, name: d.name, assets: d._count.assets, allocations: d._count.allocations }));
+
+    const allocations = await prisma.allocation.findMany({
+      where: { status: { in: ['ACTIVE', 'OVERDUE'] } },
+      select: {
+        departmentId: true,
+        employee: { select: { departmentId: true } },
+      },
+    });
+
+    const allocationCounts = new Map<string, number>();
+    for (const a of allocations) {
+      const deptId = a.departmentId ?? a.employee?.departmentId;
+      if (!deptId) continue;
+      allocationCounts.set(deptId, (allocationCounts.get(deptId) ?? 0) + 1);
+    }
+
+    return departments.map((d) => ({
+      id: d.id,
+      name: d.name,
+      assets: d._count.assets,
+      allocations: allocationCounts.get(d.id) ?? 0,
+    }));
   },
 
   async maintenanceFrequency() {

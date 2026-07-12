@@ -6,7 +6,7 @@ import { reportsService } from './reports.service.js';
 
 export const reportsRouter = Router();
 
-reportsRouter.use(requireAuth, requireRole('ADMIN', 'ASSET_MANAGER', 'DEPARTMENT_HEAD'));
+reportsRouter.use(requireAuth, requireRole('ADMIN', 'ASSET_MANAGER'));
 
 reportsRouter.get('/utilization', asyncHandler(async (_req, res) => res.json(await reportsService.utilization())));
 reportsRouter.get('/maintenance-frequency', asyncHandler(async (_req, res) => res.json(await reportsService.maintenanceFrequency())));

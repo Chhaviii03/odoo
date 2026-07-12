@@ -3,6 +3,7 @@ import { useAuth } from './lib/auth';
 import { Layout } from './components/Layout';
 import { Spinner } from './components/ui';
 import { ToastHost } from './lib/toast';
+import type { Role } from './lib/types';
 import LoginPage from './pages/LoginPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import DashboardPage from './pages/DashboardPage';
@@ -15,11 +16,12 @@ import AuditPage from './pages/AuditPage';
 import ReportsPage from './pages/ReportsPage';
 import ActivityPage from './pages/ActivityPage';
 
-function Protected({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+function Protected({ children, roles }: { children: React.ReactNode; roles?: Role[] }) {
+  const { user, loading, can } = useAuth();
   const location = useLocation();
   if (loading) return <div className="grid h-screen place-items-center"><Spinner /></div>;
   if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
+  if (roles && !can(roles)) return <Navigate to="/" replace />;
   return <Layout>{children}</Layout>;
 }
 
@@ -36,7 +38,7 @@ export default function App() {
         <Route path="/booking" element={<Protected><BookingPage /></Protected>} />
         <Route path="/maintenance" element={<Protected><MaintenancePage /></Protected>} />
         <Route path="/audit" element={<Protected><AuditPage /></Protected>} />
-        <Route path="/reports" element={<Protected><ReportsPage /></Protected>} />
+        <Route path="/reports" element={<Protected roles={['ADMIN', 'ASSET_MANAGER']}><ReportsPage /></Protected>} />
         <Route path="/activity" element={<Protected><ActivityPage /></Protected>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

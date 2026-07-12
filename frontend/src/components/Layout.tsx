@@ -23,7 +23,7 @@ const NAV: NavItem[] = [
   { to: '/booking', label: 'Resource Booking' },
   { to: '/maintenance', label: 'Maintenance' },
   { to: '/audit', label: 'Audit' },
-  { to: '/reports', label: 'Reports', roles: ['ADMIN', 'ASSET_MANAGER', 'DEPARTMENT_HEAD'] },
+  { to: '/reports', label: 'Reports', roles: ['ADMIN', 'ASSET_MANAGER'] },
   { to: '/activity', label: 'Notifications & Logs' },
 ];
 
