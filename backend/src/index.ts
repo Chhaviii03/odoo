@@ -14,3 +14,4 @@ server.listen(env.port, () => {
   console.log(`AssetFlow API listening on http://localhost:${env.port}`);
   console.log(`Health check: http://localhost:${env.port}/health`);
 });
+

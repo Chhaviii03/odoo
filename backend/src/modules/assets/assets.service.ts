@@ -1,4 +1,4 @@
-import type { AssetStatus, Prisma } from '@prisma/client';
+import type { AssetStatus, Prisma, Role } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
 import { ApiError } from '../../lib/errors.js';
 import { logActivity } from '../../shared/activityLog.js';
@@ -13,6 +13,13 @@ const ASSET_STATUSES: AssetStatus[] = [
   'RETIRED',
   'DISPOSED',
 ];
+
+/** Caller identity used to scope the asset directory. */
+export type AssetViewer = {
+  sub: string;
+  role: Role;
+  departmentId: string | null;
+};
 
 /** Match user text like "available", "under maintenance", "UNDER_MAINTENANCE". */
 function matchAssetStatuses(query: string): AssetStatus[] {
@@ -45,29 +52,112 @@ function splitCsv(value?: string | null): string[] {
     .filter(Boolean);
 }
 
+async function departmentIdsForViewer(viewer: AssetViewer): Promise<string[]> {
+  const headed = await prisma.department.findMany({
+    where: { headId: viewer.sub },
+    select: { id: true },
+  });
+  const ids = new Set(headed.map((d) => d.id));
+  if (viewer.departmentId) ids.add(viewer.departmentId);
+  return [...ids];
+}
+
+/**
+ * Role-scoped visibility for Screen 4 (Asset Registration & Directory).
+ * - Admin / Asset Manager: full catalog
+ * - Department Head: assets owned by / actively allocated to their department(s)
+ * - Employee: assets currently or previously allocated to them
+ * When `includeBookables` is true (Resource Booking), shared resources are also visible.
+ */
+async function visibilityWhere(
+  viewer: AssetViewer,
+  opts: { includeBookables?: boolean } = {},
+): Promise<Prisma.AssetWhereInput | undefined> {
+  if (viewer.role === 'ADMIN' || viewer.role === 'ASSET_MANAGER') {
+    return undefined;
+  }
+
+  if (viewer.role === 'DEPARTMENT_HEAD') {
+    const deptIds = await departmentIdsForViewer(viewer);
+    const deptScope: Prisma.AssetWhereInput = deptIds.length
+      ? {
+          OR: [
+            { departmentId: { in: deptIds } },
+            { allocations: { some: { departmentId: { in: deptIds }, status: 'ACTIVE' } } },
+            { allocations: { some: { employee: { departmentId: { in: deptIds } }, status: 'ACTIVE' } } },
+          ],
+        }
+      : { id: { in: [] } };
+
+    if (opts.includeBookables) {
+      return { OR: [deptScope, { isBookable: true }] };
+    }
+    return deptScope;
+  }
+
+  // EMPLOYEE — practical: active + past allocations to this person
+  const mine: Prisma.AssetWhereInput = {
+    allocations: { some: { employeeId: viewer.sub } },
+  };
+  if (opts.includeBookables) {
+    return { OR: [mine, { isBookable: true }] };
+  }
+  return mine;
+}
+
+async function assertCanViewAsset(assetId: string, viewer: AssetViewer): Promise<void> {
+  // Detail / bookings: same directory scope, plus any shared bookable resource
+  const scope = await visibilityWhere(viewer, { includeBookables: true });
+  if (!scope) {
+    const exists = await prisma.asset.findUnique({ where: { id: assetId }, select: { id: true } });
+    if (!exists) throw ApiError.notFound('Asset not found');
+    return;
+  }
+  const visible = await prisma.asset.findFirst({
+    where: { AND: [{ id: assetId }, scope] },
+    select: { id: true },
+  });
+  if (!visible) throw ApiError.notFound('Asset not found');
+}
+
+function mergeWhere(
+  filterWhere: Prisma.AssetWhereInput,
+  scope?: Prisma.AssetWhereInput,
+): Prisma.AssetWhereInput {
+  if (!scope) return filterWhere;
+  const parts = [filterWhere, scope].filter((w) => Object.keys(w).length > 0);
+  if (parts.length <= 1) return parts[0] ?? {};
+  return { AND: parts };
+}
+
 export const assetsService = {
-  async filterOptions() {
+  ensureVisible: assertCanViewAsset,
+
+  async filterOptions(viewer: AssetViewer) {
+    const scope = await visibilityWhere(viewer);
+    const scoped = (extra: Prisma.AssetWhereInput = {}) => mergeWhere(extra, scope);
+
     const [tags, serials, qrs, locations, statuses, categories, departments] = await Promise.all([
-      prisma.asset.findMany({ select: { assetTag: true }, distinct: ['assetTag'], orderBy: { assetTag: 'asc' } }),
+      prisma.asset.findMany({ where: scoped(), select: { assetTag: true }, distinct: ['assetTag'], orderBy: { assetTag: 'asc' } }),
       prisma.asset.findMany({
-        where: { serialNumber: { not: null } },
+        where: scoped({ serialNumber: { not: null } }),
         select: { serialNumber: true },
         distinct: ['serialNumber'],
         orderBy: { serialNumber: 'asc' },
       }),
       prisma.asset.findMany({
-        where: { qrCode: { not: null } },
+        where: scoped({ qrCode: { not: null } }),
         select: { qrCode: true },
         distinct: ['qrCode'],
         orderBy: { qrCode: 'asc' },
       }),
       prisma.asset.findMany({
-        where: { location: { not: null } },
+        where: scoped({ location: { not: null } }),
         select: { location: true },
         distinct: ['location'],
         orderBy: { location: 'asc' },
       }),
-      prisma.asset.findMany({ select: { status: true }, distinct: ['status'], orderBy: { status: 'asc' } }),
+      prisma.asset.findMany({ where: scoped(), select: { status: true }, distinct: ['status'], orderBy: { status: 'asc' } }),
       prisma.assetCategory.findMany({
         orderBy: { name: 'asc' },
         select: { id: true, name: true, _count: { select: { assets: true } } },
@@ -149,7 +239,7 @@ export const assetsService = {
     };
   },
 
-  async list(filter: any) {
+  async list(filter: any, viewer: AssetViewer) {
     const where: Prisma.AssetWhereInput = {};
     const and: Prisma.AssetWhereInput[] = [];
 
@@ -210,8 +300,11 @@ export const assetsService = {
 
     if (and.length) where.AND = and;
 
+    const wantsBookables = filter.isBookable === true || filter.isBookable === 'true';
+    const scope = await visibilityWhere(viewer, { includeBookables: wantsBookables });
+
     return prisma.asset.findMany({
-      where,
+      where: mergeWhere(where, scope),
       orderBy: { createdAt: 'desc' },
       include: {
         category: { select: { id: true, name: true } },
@@ -220,7 +313,8 @@ export const assetsService = {
     });
   },
 
-  async get(id: string) {
+  async get(id: string, viewer: AssetViewer) {
+    await assertCanViewAsset(id, viewer);
     const asset = await prisma.asset.findUnique({
       where: { id },
       include: {
@@ -240,7 +334,8 @@ export const assetsService = {
     return asset;
   },
 
-  async history(id: string) {
+  async history(id: string, viewer: AssetViewer) {
+    await assertCanViewAsset(id, viewer);
     const [statusHistory, allocations, maintenance] = await Promise.all([
       prisma.assetStatusHistory.findMany({
         where: { assetId: id },

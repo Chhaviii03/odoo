@@ -27,6 +27,9 @@ export const bookingsService = {
       const asset = await tx.asset.findUnique({ where: { id: input.assetId } });
       if (!asset) throw ApiError.notFound('Asset not found');
       if (!asset.isBookable) throw ApiError.badRequest('Asset is not bookable');
+      if (input.startTime.getTime() < Date.now()) {
+        throw ApiError.badRequest('Cannot book a past time slot');
+      }
 
       const conflict = await findBookingConflict(tx, {
         assetId: input.assetId,
@@ -51,7 +54,7 @@ export const bookingsService = {
           departmentId: input.departmentId ?? null,
           startTime: input.startTime,
           endTime: input.endTime,
-          status: input.startTime <= new Date() ? 'ONGOING' : 'UPCOMING',
+          status: 'UPCOMING',
         },
       });
       await logActivity({ userId: actorId, action: 'BOOKING_CREATE', entityType: 'Booking', entityId: booking.id, metadata: { assetId: input.assetId } });
@@ -75,6 +78,9 @@ export const bookingsService = {
       const booking = await tx.booking.findUnique({ where: { id } });
       if (!booking) throw ApiError.notFound('Booking not found');
       if (['COMPLETED', 'CANCELLED'].includes(booking.status)) throw ApiError.badRequest('Booking cannot be rescheduled');
+      if (input.startTime.getTime() < Date.now()) {
+        throw ApiError.badRequest('Cannot reschedule to a past time slot');
+      }
 
       const conflict = await findBookingConflict(tx, {
         assetId: booking.assetId,
@@ -86,7 +92,7 @@ export const bookingsService = {
 
       const updated = await tx.booking.update({
         where: { id },
-        data: { startTime: input.startTime, endTime: input.endTime, status: input.startTime <= new Date() ? 'ONGOING' : 'UPCOMING' },
+        data: { startTime: input.startTime, endTime: input.endTime, status: 'UPCOMING' },
       });
       await logActivity({ userId: actorId, action: 'BOOKING_RESCHEDULE', entityType: 'Booking', entityId: id });
       return updated;
