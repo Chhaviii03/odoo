@@ -1,5 +1,6 @@
 import clsx from 'clsx';
-import { type ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 
 const STATUS_STYLES: Record<string, string> = {
   AVAILABLE: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
@@ -78,17 +79,47 @@ export function EmptyState({ title, hint }: { title: string; hint?: string }) {
 }
 
 export function Modal({ open, onClose, title, children, wide }: { open: boolean; onClose: () => void; title: string; children: ReactNode; wide?: boolean }) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [open, onClose]);
+
   if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
-      <div className={clsx('card w-full p-6 shadow-2xl', wide ? 'max-w-2xl' : 'max-w-md')} onClick={(e) => e.stopPropagation()}>
-        <div className="mb-4 flex items-center justify-between">
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={title}>
+      <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className={clsx(
+          'relative z-10 w-full rounded-2xl border border-ink-500 bg-ink-900 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.65)] ring-1 ring-white/10',
+          wide ? 'max-w-2xl' : 'max-w-md',
+        )}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-5 flex items-start justify-between gap-3 border-b border-ink-700 pb-4">
           <h2 className="text-lg font-semibold text-white">{title}</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">✕</button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg px-2 py-1 text-slate-400 hover:bg-ink-800 hover:text-white"
+            aria-label="Close"
+          >
+            ✕
+          </button>
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

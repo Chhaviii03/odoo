@@ -30,6 +30,8 @@ export const orgService = {
   },
 
   async setDepartmentStatus(id: string, status: 'ACTIVE' | 'INACTIVE', actorId: string) {
+    const existing = await prisma.department.findUnique({ where: { id } });
+    if (!existing) throw ApiError.notFound('Department not found');
     const dept = await prisma.department.update({ where: { id }, data: { status } });
     await logActivity({ userId: actorId, action: 'DEPARTMENT_STATUS', entityType: 'Department', entityId: id, metadata: { status } });
     return dept;
