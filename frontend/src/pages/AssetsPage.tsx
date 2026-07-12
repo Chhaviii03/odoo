@@ -1,70 +1,89 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../lib/api';
 import { PageHeader, StatusBadge, Modal, Field, Spinner, EmptyState } from '../components/ui';
+import { AssetFilterBar, activeFiltersToParams, type ActiveFilter } from '../components/AssetFilterBar';
 import { toast } from '../lib/toast';
 import { fmtDate, humanize } from '../lib/format';
 import { useAuth } from '../lib/auth';
 import { useAssets, useCategories, useDepartments } from '../features/queries';
 import type { Asset } from '../lib/types';
 
-const STATUSES = ['AVAILABLE', 'ALLOCATED', 'RESERVED', 'UNDER_MAINTENANCE', 'LOST', 'RETIRED', 'DISPOSED'];
+async function uploadFile(file: File): Promise<string> {
+  const fd = new FormData();
+  fd.append('file', file);
+  const res = await api<{ url: string }>('/uploads', { method: 'POST', body: fd });
+  return res.url;
+}
 
 export default function AssetsPage() {
   const { can } = useAuth();
-  const [filters, setFilters] = useState<{ search?: string; status?: string; categoryId?: string; departmentId?: string }>({});
+  const [search, setSearch] = useState('');
+  const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
   const [registerOpen, setRegisterOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
-  const { data: assets, isLoading } = useAssets(filters);
-  const { data: categories = [] } = useCategories();
-  const { data: departments = [] } = useDepartments();
+  const queryParams = useMemo(() => activeFiltersToParams(search, activeFilters), [search, activeFilters]);
+  const { data: assets, isLoading, isError, error, isFetching } = useAssets(queryParams);
   const canManage = can(['ADMIN', 'ASSET_MANAGER']);
 
   return (
-    <div>
+    <div className="mx-auto max-w-6xl">
       <PageHeader
         title="Assets"
         subtitle="Register, search, and track assets across their lifecycle"
         actions={canManage && <button className="btn-primary" onClick={() => setRegisterOpen(true)}>+ Register Asset</button>}
       />
 
-      <div className="card mb-4 flex flex-wrap items-center gap-2 p-3">
-        <input className="input max-w-xs" placeholder="Search by tag, name, or serial…" value={filters.search ?? ''} onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))} />
-        <select className="input max-w-[180px]" value={filters.status ?? ''} onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value || undefined }))}>
-          <option value="">All statuses</option>
-          {STATUSES.map((s) => <option key={s} value={s}>{humanize(s)}</option>)}
-        </select>
-        <select className="input max-w-[180px]" value={filters.categoryId ?? ''} onChange={(e) => setFilters((f) => ({ ...f, categoryId: e.target.value || undefined }))}>
-          <option value="">All categories</option>
-          {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-        <select className="input max-w-[180px]" value={filters.departmentId ?? ''} onChange={(e) => setFilters((f) => ({ ...f, departmentId: e.target.value || undefined }))}>
-          <option value="">All departments</option>
-          {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-        </select>
-      </div>
+      <AssetFilterBar
+        search={search}
+        onSearchChange={setSearch}
+        filters={activeFilters}
+        onFiltersChange={setActiveFilters}
+        resultCount={assets?.length}
+        isFetching={isFetching}
+      />
 
-      {isLoading ? (
+      {isError ? (
+        <EmptyState title="Could not load assets" hint={error instanceof Error ? error.message : 'Check that the API is running.'} />
+      ) : isLoading ? (
         <Spinner />
       ) : !assets?.length ? (
-        <EmptyState title="No assets match your filters" hint="Try clearing the search or register a new asset." />
+        <EmptyState title="No assets match your filters" hint="Try clearing search/filters, or register a new asset." />
       ) : (
-        <div className="card overflow-hidden">
-          <table className="w-full">
-            <thead className="border-b border-ink-700"><tr><th className="th">Tag</th><th className="th">Name</th><th className="th">Category</th><th className="th">Status</th><th className="th">Location</th><th className="th">Bookable</th></tr></thead>
-            <tbody className="divide-y divide-ink-800">
-              {assets.map((a) => (
-                <tr key={a.id} className="cursor-pointer hover:bg-ink-800/50" onClick={() => setDetailId(a.id)}>
-                  <td className="td font-mono text-accent-soft">{a.assetTag}</td>
-                  <td className="td font-medium text-white">{a.name}</td>
-                  <td className="td text-slate-400">{a.category?.name}</td>
-                  <td className="td"><StatusBadge status={a.status} /></td>
-                  <td className="td text-slate-400">{a.location ?? '—'}</td>
-                  <td className="td">{a.isBookable ? 'Yes' : '—'}</td>
+        <div className="overflow-hidden rounded-xl border border-ink-700 bg-ink-900">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px]">
+              <thead>
+                <tr className="border-b border-ink-700 bg-ink-950/60">
+                  <th className="th">Tag</th>
+                  <th className="th">Name</th>
+                  <th className="th">Category</th>
+                  <th className="th">Status</th>
+                  <th className="th">Location</th>
+                  <th className="th">Bookable</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-ink-800/80">
+                {assets.map((a) => (
+                  <tr
+                    key={a.id}
+                    className="cursor-pointer transition-colors hover:bg-ink-800/40"
+                    onClick={() => setDetailId(a.id)}
+                  >
+                    <td className="td font-mono text-sm text-accent-soft">{a.assetTag}</td>
+                    <td className="td font-medium text-white">{a.name}</td>
+                    <td className="td text-slate-400">{a.category?.name}</td>
+                    <td className="td"><StatusBadge status={a.status} /></td>
+                    <td className="td text-slate-400">{a.location ?? '—'}</td>
+                    <td className="td text-slate-400">{a.isBookable ? 'Yes' : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="border-t border-ink-800 px-4 py-2.5 text-xs text-slate-500">
+            Click a row to view allocation & maintenance history.
+          </p>
         </div>
       )}
 
@@ -78,57 +97,149 @@ function RegisterModal({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
   const { data: categories = [] } = useCategories();
   const { data: departments = [] } = useDepartments();
-  const [form, setForm] = useState<Record<string, any>>({ isBookable: false, condition: 'Good' });
+  const [form, setForm] = useState<Record<string, any>>({ isBookable: false, condition: 'Good', documentUrls: [] as string[] });
+  const [uploading, setUploading] = useState(false);
 
   const create = useMutation({
-    mutationFn: () => api('/assets', { method: 'POST', body: {
-      name: form.name,
-      categoryId: form.categoryId,
-      departmentId: form.departmentId || null,
-      serialNumber: form.serialNumber || undefined,
-      location: form.location || undefined,
-      condition: form.condition,
-      acquisitionCost: form.acquisitionCost ? Number(form.acquisitionCost) : undefined,
-      acquisitionDate: form.acquisitionDate || undefined,
-      isBookable: form.isBookable,
-    } }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['assets'] }); toast('Asset registered — tag auto-generated', 'success'); onClose(); },
+    mutationFn: () =>
+      api('/assets', {
+        method: 'POST',
+        body: {
+          name: form.name,
+          categoryId: form.categoryId,
+          departmentId: form.departmentId || null,
+          serialNumber: form.serialNumber || undefined,
+          qrCode: form.qrCode || undefined,
+          location: form.location || undefined,
+          condition: form.condition,
+          acquisitionCost: form.acquisitionCost ? Number(form.acquisitionCost) : undefined,
+          acquisitionDate: form.acquisitionDate || undefined,
+          isBookable: form.isBookable,
+          photoUrl: form.photoUrl || undefined,
+          documentUrls: form.documentUrls?.length ? form.documentUrls : undefined,
+        },
+      }),
+    onSuccess: (asset: Asset) => {
+      qc.invalidateQueries({ queryKey: ['assets'] });
+      qc.invalidateQueries({ queryKey: ['asset-filter-options'] });
+      toast(`Asset registered as ${asset.assetTag}`, 'success');
+      onClose();
+    },
     onError: (e) => toast(e instanceof ApiError ? e.message : 'Failed', 'error'),
   });
 
   const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }));
 
+  async function onPhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const url = await uploadFile(file);
+      set('photoUrl', url);
+      toast('Photo uploaded', 'success');
+    } catch (err) {
+      toast(err instanceof ApiError ? err.message : 'Photo upload failed', 'error');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  }
+
+  async function onDocumentsChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    setUploading(true);
+    try {
+      const urls: string[] = [];
+      for (const file of files) urls.push(await uploadFile(file));
+      set('documentUrls', [...(form.documentUrls ?? []), ...urls]);
+      toast(`${urls.length} document(s) uploaded`, 'success');
+    } catch (err) {
+      toast(err instanceof ApiError ? err.message : 'Document upload failed', 'error');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  }
+
+  function removeDocument(url: string) {
+    set(
+      'documentUrls',
+      (form.documentUrls as string[]).filter((u) => u !== url),
+    );
+  }
+
   return (
     <Modal open onClose={onClose} title="Register Asset" wide>
+      <p className="mb-4 text-xs text-slate-500">Asset Tag is auto-generated (e.g. AF-0008). QR defaults to the same tag if left blank.</p>
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Name"><input className="input" onChange={(e) => set('name', e.target.value)} /></Field>
+        <Field label="Name"><input className="input" value={form.name ?? ''} onChange={(e) => set('name', e.target.value)} /></Field>
         <Field label="Category">
-          <select className="input" onChange={(e) => set('categoryId', e.target.value)}>
+          <select className="input" value={form.categoryId ?? ''} onChange={(e) => set('categoryId', e.target.value)}>
             <option value="">Select…</option>
-            {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
           </select>
         </Field>
-        <Field label="Serial Number"><input className="input" onChange={(e) => set('serialNumber', e.target.value)} /></Field>
+        <Field label="Serial Number"><input className="input" value={form.serialNumber ?? ''} onChange={(e) => set('serialNumber', e.target.value)} /></Field>
+        <Field label="QR Code (optional)"><input className="input" placeholder="Auto = asset tag" value={form.qrCode ?? ''} onChange={(e) => set('qrCode', e.target.value)} /></Field>
         <Field label="Owning Department">
-          <select className="input" onChange={(e) => set('departmentId', e.target.value)}>
+          <select className="input" value={form.departmentId ?? ''} onChange={(e) => set('departmentId', e.target.value)}>
             <option value="">— None —</option>
-            {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+            {departments.map((d) => (
+              <option key={d.id} value={d.id}>{d.name}</option>
+            ))}
           </select>
         </Field>
-        <Field label="Acquisition Date"><input className="input" type="date" onChange={(e) => set('acquisitionDate', e.target.value)} /></Field>
-        <Field label="Acquisition Cost"><input className="input" type="number" onChange={(e) => set('acquisitionCost', e.target.value)} /></Field>
+        <Field label="Location"><input className="input" value={form.location ?? ''} onChange={(e) => set('location', e.target.value)} /></Field>
+        <Field label="Acquisition Date"><input className="input" type="date" value={form.acquisitionDate ?? ''} onChange={(e) => set('acquisitionDate', e.target.value)} /></Field>
+        <Field label="Acquisition Cost"><input className="input" type="number" min={0} step="0.01" value={form.acquisitionCost ?? ''} onChange={(e) => set('acquisitionCost', e.target.value)} /></Field>
         <Field label="Condition">
           <select className="input" value={form.condition} onChange={(e) => set('condition', e.target.value)}>
-            {['Excellent', 'Good', 'Fair', 'Poor'].map((c) => <option key={c}>{c}</option>)}
+            {['Excellent', 'Good', 'Fair', 'Poor'].map((c) => (
+              <option key={c}>{c}</option>
+            ))}
           </select>
         </Field>
-        <Field label="Location"><input className="input" onChange={(e) => set('location', e.target.value)} /></Field>
-        <label className="col-span-2 flex items-center gap-2 text-sm text-slate-300">
-          <input type="checkbox" checked={form.isBookable} onChange={(e) => set('isBookable', e.target.checked)} />
+        <label className="flex items-end gap-2 pb-2 text-sm text-slate-300">
+          <input type="checkbox" checked={!!form.isBookable} onChange={(e) => set('isBookable', e.target.checked)} />
           Shared / bookable resource
         </label>
+
+        <div className="col-span-2 grid grid-cols-2 gap-4 border-t border-ink-700 pt-4">
+          <Field label="Photo">
+            <input className="input file:mr-3 file:rounded file:border-0 file:bg-ink-700 file:px-2 file:py-1 file:text-xs file:text-slate-200" type="file" accept="image/*" onChange={onPhotoChange} disabled={uploading} />
+            {form.photoUrl && (
+              <div className="mt-2 flex items-center gap-3">
+                <img src={form.photoUrl} alt="Asset preview" className="h-16 w-16 rounded-lg object-cover border border-ink-600" />
+                <button type="button" className="text-xs text-rose-300 hover:underline" onClick={() => set('photoUrl', undefined)}>Remove</button>
+              </div>
+            )}
+          </Field>
+          <Field label="Documents">
+            <input className="input file:mr-3 file:rounded file:border-0 file:bg-ink-700 file:px-2 file:py-1 file:text-xs file:text-slate-200" type="file" multiple accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.txt" onChange={onDocumentsChange} disabled={uploading} />
+            {(form.documentUrls as string[])?.length > 0 && (
+              <ul className="mt-2 space-y-1">
+                {(form.documentUrls as string[]).map((url) => (
+                  <li key={url} className="flex items-center justify-between rounded bg-ink-800/60 px-2 py-1 text-xs text-slate-300">
+                    <a href={url} target="_blank" rel="noreferrer" className="truncate text-accent-soft hover:underline">{url.split('/').pop()}</a>
+                    <button type="button" className="ml-2 text-rose-300" onClick={() => removeDocument(url)}>✕</button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Field>
+        </div>
       </div>
-      <button className="btn-primary mt-5 w-full" disabled={!form.name || !form.categoryId || create.isPending} onClick={() => create.mutate()}>Register</button>
+      <button
+        className="btn-primary mt-5 w-full"
+        disabled={!form.name || !form.categoryId || create.isPending || uploading}
+        onClick={() => create.mutate()}
+      >
+        {uploading ? 'Uploading…' : create.isPending ? 'Registering…' : 'Register'}
+      </button>
     </Modal>
   );
 }
@@ -139,26 +250,50 @@ function AssetDetail({ id, onClose }: { id: string; onClose: () => void }) {
 
   return (
     <Modal open onClose={onClose} title={asset ? `${asset.assetTag} · ${asset.name}` : 'Asset'} wide>
-      {!asset ? <Spinner /> : (
+      {!asset ? (
+        <Spinner />
+      ) : (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
             <Info label="Status"><StatusBadge status={asset.status} /></Info>
             <Info label="Category">{asset.category?.name}</Info>
             <Info label="Department">{asset.department?.name ?? '—'}</Info>
             <Info label="Serial">{asset.serialNumber ?? '—'}</Info>
+            <Info label="QR Code">{asset.qrCode ?? '—'}</Info>
             <Info label="Condition">{asset.condition ?? '—'}</Info>
             <Info label="Location">{asset.location ?? '—'}</Info>
+            <Info label="Acquisition">{asset.acquisitionDate ? fmtDate(asset.acquisitionDate) : '—'}</Info>
+            <Info label="Cost">{asset.acquisitionCost != null ? `₹${asset.acquisitionCost}` : '—'}</Info>
+            <Info label="Bookable">{asset.isBookable ? 'Yes' : 'No'}</Info>
           </div>
 
+          {(asset.photoUrl || (asset.documentUrls?.length ?? 0) > 0) && (
+            <div>
+              <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Photo & Documents</h4>
+              <div className="flex flex-wrap gap-3">
+                {asset.photoUrl && (
+                  <a href={asset.photoUrl} target="_blank" rel="noreferrer">
+                    <img src={asset.photoUrl} alt={asset.name} className="h-24 w-24 rounded-lg border border-ink-600 object-cover" />
+                  </a>
+                )}
+                {asset.documentUrls?.map((url) => (
+                  <a key={url} href={url} target="_blank" rel="noreferrer" className="rounded-lg border border-ink-600 bg-ink-800 px-3 py-2 text-xs text-accent-soft hover:underline">
+                    {url.split('/').pop()}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div>
-            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Status History</h4>
+            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Lifecycle Status History</h4>
             <div className="space-y-1">
               {history?.statusHistory?.length ? history.statusHistory.map((h: any) => (
                 <div key={h.id} className="flex items-center justify-between rounded-lg bg-ink-800/60 px-3 py-2 text-sm">
                   <span className="text-slate-300">{humanize(h.fromStatus) || 'New'} → {humanize(h.toStatus)}</span>
                   <span className="text-slate-500">{h.reason} · {fmtDate(h.changedAt)}</span>
                 </div>
-              )) : <p className="text-sm text-slate-500">No history.</p>}
+              )) : <p className="text-sm text-slate-500">No status history.</p>}
             </div>
           </div>
 
@@ -168,9 +303,31 @@ function AssetDetail({ id, onClose }: { id: string; onClose: () => void }) {
               {history?.allocations?.length ? history.allocations.map((a: any) => (
                 <div key={a.id} className="flex items-center justify-between rounded-lg bg-ink-800/60 px-3 py-2 text-sm">
                   <span className="text-slate-300">{a.employee?.name ?? a.department?.name ?? 'Unknown'}</span>
-                  <span className="text-slate-500"><StatusBadge status={a.status} /> · {fmtDate(a.allocatedAt)}</span>
+                  <span className="flex items-center gap-2 text-slate-500">
+                    <StatusBadge status={a.status} />
+                    {fmtDate(a.allocatedAt)}
+                    {a.returnedAt ? ` → ${fmtDate(a.returnedAt)}` : ''}
+                  </span>
                 </div>
               )) : <p className="text-sm text-slate-500">No allocations.</p>}
+            </div>
+          </div>
+
+          <div>
+            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Maintenance History</h4>
+            <div className="space-y-1">
+              {history?.maintenance?.length ? history.maintenance.map((m: any) => (
+                <div key={m.id} className="rounded-lg bg-ink-800/60 px-3 py-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-300">{m.issue}</span>
+                    <StatusBadge status={m.status} />
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Raised by {m.raisedBy?.name ?? '—'} · {humanize(m.priority)} · {fmtDate(m.createdAt)}
+                    {m.resolvedAt ? ` · resolved ${fmtDate(m.resolvedAt)}` : ''}
+                  </p>
+                </div>
+              )) : <p className="text-sm text-slate-500">No maintenance requests.</p>}
             </div>
           </div>
         </div>

@@ -12,14 +12,19 @@ export const assetsRouter = Router();
 
 assetsRouter.use(requireAuth);
 
-assetsRouter.get('/:id/allocations', asyncHandler(async (req, res) => res.json(await allocationsService.listForAsset(req.params.id))));
-assetsRouter.get('/:id/bookings', asyncHandler(async (req, res) => res.json(await bookingsService.listForAsset(req.params.id))));
-
+// List + facets FIRST so they are never swallowed by /:id
 assetsRouter.get(
   '/',
   validate(assetFilterSchema, 'query'),
   asyncHandler(async (req, res) => {
     res.json(await assetsService.list(validated(req, 'query')));
+  }),
+);
+
+assetsRouter.get(
+  '/filter-options',
+  asyncHandler(async (_req, res) => {
+    res.json(await assetsService.filterOptions());
   }),
 );
 
@@ -32,8 +37,10 @@ assetsRouter.post(
   }),
 );
 
-assetsRouter.get('/:id', asyncHandler(async (req, res) => res.json(await assetsService.get(req.params.id))));
+assetsRouter.get('/:id/allocations', asyncHandler(async (req, res) => res.json(await allocationsService.listForAsset(req.params.id))));
+assetsRouter.get('/:id/bookings', asyncHandler(async (req, res) => res.json(await bookingsService.listForAsset(req.params.id))));
 assetsRouter.get('/:id/history', asyncHandler(async (req, res) => res.json(await assetsService.history(req.params.id))));
+assetsRouter.get('/:id', asyncHandler(async (req, res) => res.json(await assetsService.get(req.params.id))));
 
 assetsRouter.patch(
   '/:id',

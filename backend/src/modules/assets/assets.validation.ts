@@ -1,5 +1,13 @@
 import { z } from 'zod';
 
+const emptyToUndefined = (val: unknown) => {
+  if (val === '' || val === null || val === undefined) return undefined;
+  if (typeof val === 'string') return val.trim() === '' ? undefined : val.trim();
+  return val;
+};
+
+const optionalString = z.preprocess(emptyToUndefined, z.string().optional());
+
 export const createAssetSchema = z.object({
   name: z.string().min(2),
   categoryId: z.string().uuid(),
@@ -18,15 +26,16 @@ export const createAssetSchema = z.object({
 export const updateAssetSchema = createAssetSchema.partial();
 
 export const assetFilterSchema = z.object({
-  tag: z.string().optional(),
-  serial: z.string().optional(),
-  qr: z.string().optional(),
-  search: z.string().optional(),
-  categoryId: z.string().uuid().optional(),
-  status: z.enum(['AVAILABLE', 'ALLOCATED', 'RESERVED', 'UNDER_MAINTENANCE', 'LOST', 'RETIRED', 'DISPOSED']).optional(),
-  departmentId: z.string().uuid().optional(),
-  location: z.string().optional(),
-  isBookable: z.coerce.boolean().optional(),
+  // Comma-separated values supported for multi-filter chips, e.g. tag=AF-0001,AF-0002
+  tag: optionalString,
+  serial: optionalString,
+  qr: optionalString,
+  search: optionalString,
+  categoryId: optionalString, // uuid or comma-separated uuids
+  status: optionalString, // enum or comma-separated enums
+  departmentId: optionalString,
+  location: optionalString,
+  isBookable: z.preprocess(emptyToUndefined, z.coerce.boolean().optional()),
 });
 
 export const retireSchema = z.object({
