@@ -9,9 +9,14 @@ import type { Asset } from '../lib/types';
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 8); // 8:00 – 20:00
 
+function isBookingBlocked(asset: Asset) {
+  return asset.status === 'UNDER_MAINTENANCE' || ['LOST', 'RETIRED', 'DISPOSED'].includes(asset.status);
+}
+
 export default function BookingPage() {
-  const [selected, setSelected] = useState<Asset | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const { data: assets, isLoading } = useAssets({ isBookable: 'true' });
+  const selected = assets?.find((a) => a.id === selectedId) ?? null;
 
   return (
     <div>
@@ -21,11 +26,27 @@ export default function BookingPage() {
           <div className="border-b border-ink-700 px-4 py-3 text-sm font-semibold text-white">Bookable Resources</div>
           {isLoading ? <Spinner /> : !assets?.length ? <EmptyState title="No bookable resources" hint="Mark an asset as bookable when registering it." /> : (
             <div className="divide-y divide-ink-800">
-              {assets.map((a) => (
-                <button key={a.id} onClick={() => setSelected(a)} className={`flex w-full items-center justify-between px-4 py-3 text-left hover:bg-ink-800/50 ${selected?.id === a.id ? 'bg-ink-800' : ''}`}>
-                  <div><p className="font-mono text-xs text-accent-soft">{a.assetTag}</p><p className="text-sm text-slate-200">{a.name}</p></div>
-                </button>
-              ))}
+              {assets.map((a) => {
+                const blocked = isBookingBlocked(a);
+                return (
+                  <button
+                    key={a.id}
+                    onClick={() => setSelectedId(a.id)}
+                    className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-ink-800/50 ${selected?.id === a.id ? 'bg-ink-800' : ''}`}
+                  >
+                    <div className="min-w-0">
+                      <p className="font-mono text-xs text-accent-soft">{a.assetTag}</p>
+                      <p className="text-sm text-slate-200">{a.name}</p>
+                      {blocked && (
+                        <p className="mt-0.5 text-xs text-orange-300">
+                          {a.status === 'UNDER_MAINTENANCE' ? 'Cannot book — under maintenance' : 'Cannot book'}
+                        </p>
+                      )}
+                    </div>
+                    {blocked && <StatusBadge status={a.status} />}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
@@ -45,6 +66,7 @@ function BookingPanel({ asset }: { asset: Asset }) {
   const [date, setDate] = useState(today);
   const [start, setStart] = useState(nextHour);
   const [end, setEnd] = useState(`${String(Math.min(20, Number(nextHour.slice(0, 2)) + 1)).padStart(2, '0')}:00`);
+  const blocked = isBookingBlocked(asset);
 
   const { data: bookings } = useQuery({ queryKey: ['bookings', asset.id], queryFn: () => api<any[]>(`/assets/${asset.id}/bookings`) });
 
@@ -78,42 +100,63 @@ function BookingPanel({ asset }: { asset: Asset }) {
   return (
     <div className="space-y-4">
       <div className="card p-5">
-        <div className="mb-4 flex items-center justify-between">
-          <div><p className="font-mono text-xs text-accent-soft">{asset.assetTag}</p><h3 className="text-lg font-semibold text-white">{asset.name}</h3></div>
-          <input className="input max-w-[180px]" type="date" min={today} value={date} onChange={(e) => setDate(e.target.value < today ? today : e.target.value)} />
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <p className="font-mono text-xs text-accent-soft">{asset.assetTag}</p>
+            <h3 className="text-lg font-semibold text-white">{asset.name}</h3>
+          </div>
+          <div className="flex items-center gap-3">
+            <StatusBadge status={asset.status} />
+            <input className="input max-w-[180px]" type="date" min={today} value={date} onChange={(e) => setDate(e.target.value < today ? today : e.target.value)} disabled={blocked} />
+          </div>
         </div>
 
-        <div className="grid gap-1">
-          {HOURS.map((h) => {
-            const b = slotBooking(h);
-            const past = isPastHour(h);
-            const style = b
-              ? 'border-amber-500/40 bg-amber-500/15 text-amber-200'
-              : past
-                ? 'border-ink-800 bg-ink-900/50 text-slate-600'
-                : 'border-ink-700 bg-ink-800/40 text-slate-500';
-            return (
-              <div key={h} className="flex items-center gap-3">
-                <span className="w-14 shrink-0 text-right text-xs text-slate-500">{h}:00</span>
-                <div className={`h-9 flex-1 rounded-md border px-3 text-xs leading-9 ${style}`}>
-                  {b ? `Booked · ${b.bookedBy?.name ?? ''} (${fmtTime(b.startTime)}–${fmtTime(b.endTime)})` : past ? 'Past' : 'Available'}
+        {blocked ? (
+          <div className="rounded-lg border border-orange-500/40 bg-orange-500/10 px-4 py-8 text-center">
+            <p className="text-sm font-medium text-orange-200">
+              {asset.status === 'UNDER_MAINTENANCE'
+                ? 'Cannot book — this resource is under maintenance'
+                : 'Cannot book — this resource is not available'}
+            </p>
+            <p className="mt-1 text-xs text-orange-300/80">
+              Booking will be available again once maintenance is resolved and the asset returns to Available.
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-1">
+            {HOURS.map((h) => {
+              const b = slotBooking(h);
+              const past = isPastHour(h);
+              const style = b
+                ? 'border-amber-500/40 bg-amber-500/15 text-amber-200'
+                : past
+                  ? 'border-ink-800 bg-ink-900/50 text-slate-600'
+                  : 'border-ink-700 bg-ink-800/40 text-slate-500';
+              return (
+                <div key={h} className="flex items-center gap-3">
+                  <span className="w-14 shrink-0 text-right text-xs text-slate-500">{h}:00</span>
+                  <div className={`h-9 flex-1 rounded-md border px-3 text-xs leading-9 ${style}`}>
+                    {b ? `Booked · ${b.bookedBy?.name ?? ''} (${fmtTime(b.startTime)}–${fmtTime(b.endTime)})` : past ? 'Past' : 'Available'}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      <div className="card p-5">
-        <h4 className="mb-3 text-sm font-semibold text-white">Book a slot</h4>
-        <div className="flex flex-wrap items-end gap-3">
-          <Field label="Start"><input className="input max-w-[120px]" type="time" value={start} onChange={(e) => setStart(e.target.value)} /></Field>
-          <Field label="End"><input className="input max-w-[120px]" type="time" value={end} onChange={(e) => setEnd(e.target.value)} /></Field>
-          <button className="btn-primary" disabled={create.isPending || isPastSlot} onClick={() => create.mutate()}>Book slot</button>
+      {!blocked && (
+        <div className="card p-5">
+          <h4 className="mb-3 text-sm font-semibold text-white">Book a slot</h4>
+          <div className="flex flex-wrap items-end gap-3">
+            <Field label="Start"><input className="input max-w-[120px]" type="time" value={start} onChange={(e) => setStart(e.target.value)} /></Field>
+            <Field label="End"><input className="input max-w-[120px]" type="time" value={end} onChange={(e) => setEnd(e.target.value)} /></Field>
+            <button className="btn-primary" disabled={create.isPending || isPastSlot} onClick={() => create.mutate()}>Book slot</button>
+          </div>
+          <p className="mt-2 text-xs text-slate-500">Past slots can’t be booked. Overlapping requests are rejected. A slot starting exactly when another ends is allowed.</p>
+          {isPastSlot && <p className="mt-1 text-xs text-rose-300">Selected start time is in the past — pick a future slot.</p>}
         </div>
-        <p className="mt-2 text-xs text-slate-500">Past slots can’t be booked. Overlapping requests are rejected. A slot starting exactly when another ends is allowed.</p>
-        {isPastSlot && <p className="mt-1 text-xs text-rose-300">Selected start time is in the past — pick a future slot.</p>}
-      </div>
+      )}
 
       <div className="card p-5">
         <h4 className="mb-3 text-sm font-semibold text-white">Bookings</h4>

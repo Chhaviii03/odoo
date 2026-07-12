@@ -27,6 +27,12 @@ export const bookingsService = {
       const asset = await tx.asset.findUnique({ where: { id: input.assetId } });
       if (!asset) throw ApiError.notFound('Asset not found');
       if (!asset.isBookable) throw ApiError.badRequest('Asset is not bookable');
+      if (asset.status === 'UNDER_MAINTENANCE') {
+        throw ApiError.badRequest('Cannot book — this resource is under maintenance');
+      }
+      if (['LOST', 'RETIRED', 'DISPOSED'].includes(asset.status)) {
+        throw ApiError.badRequest('Cannot book — this resource is not available');
+      }
       if (input.startTime.getTime() < Date.now()) {
         throw ApiError.badRequest('Cannot book a past time slot');
       }
@@ -78,6 +84,10 @@ export const bookingsService = {
       const booking = await tx.booking.findUnique({ where: { id } });
       if (!booking) throw ApiError.notFound('Booking not found');
       if (['COMPLETED', 'CANCELLED'].includes(booking.status)) throw ApiError.badRequest('Booking cannot be rescheduled');
+      const asset = await tx.asset.findUnique({ where: { id: booking.assetId } });
+      if (asset?.status === 'UNDER_MAINTENANCE') {
+        throw ApiError.badRequest('Cannot reschedule — this resource is under maintenance');
+      }
       if (input.startTime.getTime() < Date.now()) {
         throw ApiError.badRequest('Cannot reschedule to a past time slot');
       }
