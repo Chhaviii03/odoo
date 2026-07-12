@@ -4,10 +4,29 @@ import { ApiError } from '../../lib/errors.js';
 import { transitionAsset } from '../../shared/assetStateMachine.js';
 import { logActivity } from '../../shared/activityLog.js';
 import { notifyMany } from '../../shared/notifications.js';
+import type { JwtPayload } from '../../lib/jwt.js';
+
+function isManager(actor: JwtPayload) {
+  return actor.role === 'ADMIN' || actor.role === 'ASSET_MANAGER';
+}
+
+// Non-managers (department heads, employees) can only see audit cycles scoped to
+// their own department, company-wide cycles (no department scope), or cycles they
+// are personally assigned to audit. Managers/admins see everything.
+function visibilityFilter(actor: JwtPayload): Prisma.AuditCycleWhereInput {
+  if (isManager(actor)) return {};
+  const or: Prisma.AuditCycleWhereInput[] = [
+    { scopeDepartmentId: null },
+    { assignments: { some: { auditorEmployeeId: actor.sub } } },
+  ];
+  if (actor.departmentId) or.push({ scopeDepartmentId: actor.departmentId });
+  return { OR: or };
+}
 
 export const auditsService = {
-  list() {
+  list(actor: JwtPayload) {
     return prisma.auditCycle.findMany({
+      where: visibilityFilter(actor),
       orderBy: { createdAt: 'desc' },
       include: {
         createdBy: { select: { id: true, name: true } },
@@ -15,6 +34,25 @@ export const auditsService = {
         _count: { select: { items: true } },
       },
     });
+  },
+
+  // Guards direct-by-id access to a cycle's items/discrepancies for non-managers.
+  async assertCanViewCycle(cycleId: string, actor: JwtPayload) {
+    if (isManager(actor)) return;
+    const cycle = await prisma.auditCycle.findUnique({
+      where: { id: cycleId },
+      select: {
+        scopeDepartmentId: true,
+        assignments: { where: { auditorEmployeeId: actor.sub }, select: { id: true } },
+      },
+    });
+    if (!cycle) throw ApiError.notFound('Audit cycle not found');
+    const inScope =
+      cycle.scopeDepartmentId === null ||
+      (actor.departmentId != null && cycle.scopeDepartmentId === actor.departmentId);
+    if (!inScope && cycle.assignments.length === 0) {
+      throw ApiError.forbidden('You do not have access to this audit cycle');
+    }
   },
 
   // Create a cycle, snapshot matching assets into audit_items, assign auditors.
@@ -64,7 +102,8 @@ export const auditsService = {
     return prisma.auditAssignment.findMany({ where: { auditCycleId: cycleId }, include: { auditor: { select: { id: true, name: true } } } });
   },
 
-  listItems(cycleId: string) {
+  async listItems(cycleId: string, actor: JwtPayload) {
+    await this.assertCanViewCycle(cycleId, actor);
     return prisma.auditItem.findMany({
       where: { auditCycleId: cycleId },
       include: {
@@ -97,7 +136,8 @@ export const auditsService = {
   },
 
   // Discrepancy report = a filtered query, not a stored report.
-  discrepancies(cycleId: string) {
+  async discrepancies(cycleId: string, actor: JwtPayload) {
+    await this.assertCanViewCycle(cycleId, actor);
     return prisma.auditItem.findMany({
       where: { auditCycleId: cycleId, verificationStatus: { in: ['MISSING', 'DAMAGED'] } },
       include: { asset: { select: { id: true, assetTag: true, name: true, location: true } }, verifiedBy: { select: { id: true, name: true } } },
