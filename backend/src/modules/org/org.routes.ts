@@ -22,8 +22,9 @@ export const employeesRouter = Router();
 departmentsRouter.use(requireAuth);
 departmentsRouter.get('/', asyncHandler(async (_req, res) => res.json(await orgService.listDepartments())));
 departmentsRouter.post('/', requireRole('ADMIN'), validate(createDepartmentSchema), asyncHandler(async (req, res) => res.status(201).json(await orgService.createDepartment(req.body, req.user!.sub))));
-departmentsRouter.patch('/:id', requireRole('ADMIN'), validate(updateDepartmentSchema), asyncHandler(async (req, res) => res.json(await orgService.updateDepartment(req.params.id, req.body, req.user!.sub))));
+// `/status` must be registered before `/:id` so it is not swallowed by the generic patch.
 departmentsRouter.patch('/:id/status', requireRole('ADMIN'), validate(statusSchema), asyncHandler(async (req, res) => res.json(await orgService.setDepartmentStatus(req.params.id, req.body.status, req.user!.sub))));
+departmentsRouter.patch('/:id', requireRole('ADMIN'), validate(updateDepartmentSchema), asyncHandler(async (req, res) => res.json(await orgService.updateDepartment(req.params.id, req.body, req.user!.sub))));
 
 // ---- Categories (Admin) ----
 categoriesRouter.use(requireAuth);
