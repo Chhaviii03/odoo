@@ -17,7 +17,7 @@ async function uploadFile(file: File): Promise<string> {
 }
 
 export default function AssetsPage() {
-  const { can } = useAuth();
+  const { can, user } = useAuth();
   const [search, setSearch] = useState('');
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
   const [registerOpen, setRegisterOpen] = useState(false);
@@ -25,12 +25,35 @@ export default function AssetsPage() {
   const queryParams = useMemo(() => activeFiltersToParams(search, activeFilters), [search, activeFilters]);
   const { data: assets, isLoading, isError, error, isFetching } = useAssets(queryParams);
   const canManage = can(['ADMIN', 'ASSET_MANAGER']);
+  const hasFilters = search.trim().length > 0 || activeFilters.length > 0;
+
+  const subtitle = canManage
+    ? 'Register, search, and track assets across their lifecycle'
+    : can(['DEPARTMENT_HEAD'])
+      ? 'Assets owned by or allocated to your department'
+      : 'Assets allocated to you (current and past)';
+
+  const emptyTitle = hasFilters
+    ? 'No assets match your filters'
+    : canManage
+      ? 'No assets yet'
+      : can(['DEPARTMENT_HEAD'])
+        ? 'No assets in your department'
+        : 'No assets allocated to you';
+
+  const emptyHint = hasFilters
+    ? 'Try clearing search/filters.'
+    : canManage
+      ? 'Register a new asset to get started.'
+      : can(['DEPARTMENT_HEAD'])
+        ? 'Assets appear here when they belong to your department or are allocated to your team.'
+        : 'Assets appear here after an Asset Manager allocates them to you. Book shared resources from Bookings.';
 
   return (
     <div className="mx-auto max-w-6xl">
       <PageHeader
         title="Assets"
-        subtitle="Register, search, and track assets across their lifecycle"
+        subtitle={subtitle}
         actions={canManage && <button className="btn-primary" onClick={() => setRegisterOpen(true)}>+ Register Asset</button>}
       />
 
@@ -48,7 +71,7 @@ export default function AssetsPage() {
       ) : isLoading ? (
         <Spinner />
       ) : !assets?.length ? (
-        <EmptyState title="No assets match your filters" hint="Try clearing search/filters, or register a new asset." />
+        <EmptyState title={emptyTitle} hint={emptyHint} />
       ) : (
         <div className="overflow-hidden rounded-xl border border-ink-700 bg-ink-900">
           <div className="overflow-x-auto">
@@ -83,6 +106,8 @@ export default function AssetsPage() {
           </div>
           <p className="border-t border-ink-800 px-4 py-2.5 text-xs text-slate-500">
             Click a row to view allocation & maintenance history.
+            {!canManage && user?.role === 'EMPLOYEE' && ' Showing only assets allocated to you.'}
+            {!canManage && user?.role === 'DEPARTMENT_HEAD' && " Showing only your department's assets."}
           </p>
         </div>
       )}
