@@ -15,6 +15,15 @@ export function useEmployees(enabled = true) {
 }
 
 export function useAssets(params: Record<string, string | undefined> = {}) {
-  const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v) as [string, string][]).toString();
-  return useQuery({ queryKey: ['assets', params], queryFn: () => api<Asset[]>(`/assets${qs ? `?${qs}` : ''}`) });
+  const clean = Object.fromEntries(
+    Object.entries(params).filter(([, v]) => v != null && String(v).trim() !== ''),
+  ) as Record<string, string>;
+
+  return useQuery({
+    queryKey: ['assets', clean],
+    queryFn: async () => {
+      const qs = new URLSearchParams(clean).toString();
+      return api<Asset[]>(`/assets${qs ? `?${qs}` : ''}`);
+    },
+  });
 }

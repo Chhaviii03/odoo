@@ -53,6 +53,8 @@ export interface Asset {
   isBookable: boolean;
   status: AssetStatus;
   photoUrl?: string | null;
+  documentUrls?: string[];
+  acquisitionDate?: string | null;
 }
 
 export interface Notification {
