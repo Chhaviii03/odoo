@@ -55,9 +55,9 @@ authRouter.post(
   '/forgot-password',
   authLimiter,
   validate(forgotPasswordSchema),
-  asyncHandler(async (_req, res) => {
-    // Always 200 to avoid account enumeration.
-    res.json({ ok: true, message: 'If an account exists, a reset link has been sent.' });
+  asyncHandler(async (req, res) => {
+    const result = await authService.forgotPassword(req.body.email);
+    res.json(result);
   }),
 );
 
@@ -66,7 +66,7 @@ authRouter.post(
   authLimiter,
   validate(resetPasswordSchema),
   asyncHandler(async (req, res) => {
-    const result = await authService.resetPassword(req.body.email, req.body.newPassword);
+    const result = await authService.resetPassword(req.body.token, req.body.newPassword);
     res.json(result);
   }),
 );

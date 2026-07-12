@@ -4,6 +4,7 @@ import { Layout } from './components/Layout';
 import { Spinner } from './components/ui';
 import { ToastHost } from './lib/toast';
 import LoginPage from './pages/LoginPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import DashboardPage from './pages/DashboardPage';
 import OrganizationPage from './pages/OrganizationPage';
 import AssetsPage from './pages/AssetsPage';
@@ -27,6 +28,7 @@ export default function App() {
     <>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/" element={<Protected><DashboardPage /></Protected>} />
         <Route path="/organization" element={<Protected><OrganizationPage /></Protected>} />
         <Route path="/assets" element={<Protected><AssetsPage /></Protected>} />

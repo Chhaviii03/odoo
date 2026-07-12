@@ -20,5 +20,15 @@ export const env = {
     refreshExpires: process.env.JWT_REFRESH_EXPIRES ?? '7d',
   },
   corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
+  frontendUrl: process.env.FRONTEND_URL ?? process.env.CORS_ORIGIN ?? 'http://localhost:5173',
   uploadDir: process.env.UPLOAD_DIR ?? 'uploads',
+  smtp: {
+    host: process.env.SMTP_HOST ?? 'smtp.gmail.com',
+    port: Number(process.env.SMTP_PORT ?? 465),
+    user: process.env.SMTP_USER ?? '',
+    pass: process.env.SMTP_PASS ?? '',
+    from: process.env.SMTP_FROM ?? process.env.SMTP_USER ?? '',
+  },
+  /** When true and SMTP is missing, forgot-password returns the reset link in the JSON (local testing only). */
+  smtpDevReturnLink: process.env.SMTP_DEV_RETURN_LINK === 'true',
 };

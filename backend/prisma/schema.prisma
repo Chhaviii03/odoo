@@ -124,9 +124,23 @@ model Employee {
   statusChanges       AssetStatusHistory[] @relation("StatusChangedBy")
   notifications       Notification[]
   activityLogs        ActivityLog[]
+  passwordResetTokens PasswordResetToken[]
 
   @@index([email])
   @@index([departmentId])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  userId    String
+  user      Employee  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model AssetCategory {
