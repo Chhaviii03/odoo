@@ -42,14 +42,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const unread = notifications.filter((n) => !n.isRead).length;
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      disconnectSocket();
+      return;
+    }
     const socket = connectSocket(user.id);
-    socket.on('notification', (n: Notification) => {
+    const onNotification = (n: Notification) => {
+      // Guard against stale socket rooms after account switches.
+      if (n.userId && n.userId !== user.id) return;
       toast(n.message, 'info');
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
-    });
+    };
+    socket.on('notification', onNotification);
     return () => {
-      socket.off('notification');
+      socket.off('notification', onNotification);
     };
   }, [user, queryClient]);
 

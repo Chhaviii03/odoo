@@ -6,7 +6,7 @@ import { toast } from '../lib/toast';
 import { fmtTime, fmtDate } from '../lib/format';
 import { localDateKey, minutesOfLocalDay, parseLocalDateTime, todayLocal, toApiDateTime } from '../lib/datetime';
 import { useAuth } from '../lib/auth';
-import { useAssets } from '../features/queries';
+import { useAssets, useDepartments } from '../features/queries';
 import type { Asset } from '../lib/types';
 
 const DAY_END_MIN = 24 * 60; // full day, 00:00 → 24:00
@@ -144,8 +144,16 @@ export default function BookingPage() {
 function BookingPanel({ asset }: { asset: Asset }) {
   const qc = useQueryClient();
   const { user, can } = useAuth();
+  const { data: departments = [] } = useDepartments();
   const canManageBookings = can(['ADMIN', 'ASSET_MANAGER']);
+  const isDeptHead = user?.role === 'DEPARTMENT_HEAD';
   const blocked = isBookingBlocked(asset);
+  const deptHeadDepartments = useMemo(() => {
+    if (!isDeptHead || !user) return [];
+    return departments.filter((d) => d.id === user.departmentId || d.head?.id === user.id);
+  }, [departments, isDeptHead, user]);
+  const [bookForDept, setBookForDept] = useState(false);
+  const [departmentId, setDepartmentId] = useState(user?.departmentId ?? '');
   const now = new Date();
   const today = todayLocal();
   const [date, setDate] = useState(today);
@@ -176,6 +184,7 @@ function BookingPanel({ asset }: { asset: Asset }) {
         assetId: asset.id,
         startTime: toApiDateTime(date, start),
         endTime: toApiDateTime(date, end),
+        ...(bookForDept && departmentId ? { departmentId } : {}),
       },
     }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['bookings', asset.id] }); toast('Your booking has been confirmed.', 'success', { title: 'Booking confirmed' }); },
@@ -358,6 +367,20 @@ function BookingPanel({ asset }: { asset: Asset }) {
       {!blocked && (
         <div className="card p-5">
           <h4 className="mb-3 text-sm font-semibold text-gray-900">Book a slot</h4>
+          {isDeptHead && (
+            <div className="mb-3 flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" checked={bookForDept} onChange={(e) => setBookForDept(e.target.checked)} />
+                Book on behalf of department
+              </label>
+              {bookForDept && (
+                <select className="input max-w-[220px]" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}>
+                  <option value="">Select department…</option>
+                  {deptHeadDepartments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                </select>
+              )}
+            </div>
+          )}
           <div className="flex flex-wrap items-end gap-3">
             <Field label="Start">
               <input
@@ -381,7 +404,7 @@ function BookingPanel({ asset }: { asset: Asset }) {
                 onChange={(e) => handleEndChange(e.target.value)}
               />
             </Field>
-            <button className="btn-primary" disabled={create.isPending || !!validationError} onClick={() => create.mutate()}>
+            <button className="btn-primary" disabled={create.isPending || !!validationError || (bookForDept && !departmentId)} onClick={() => create.mutate()}>
               Book slot
             </button>
           </div>

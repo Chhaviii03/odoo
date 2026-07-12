@@ -51,6 +51,19 @@ export async function runScheduledScans() {
         relatedEntityId: alloc.id,
       });
     }
+    const managers = await prisma.employee.findMany({
+      where: { role: { in: ['ADMIN', 'ASSET_MANAGER'] }, status: 'ACTIVE' },
+      select: { id: true },
+    });
+    for (const m of managers) {
+      await notify({
+        userId: m.id,
+        type: 'OVERDUE_RETURN',
+        message: `Overdue return: ${alloc.asset.assetTag} held by ${alloc.employeeId ? 'employee' : 'department'}.`,
+        relatedEntityType: 'Allocation',
+        relatedEntityId: alloc.id,
+      });
+    }
   }
 
   // Booking reminders. Each tier is deduped by its own notification type so a

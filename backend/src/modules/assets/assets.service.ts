@@ -71,7 +71,7 @@ async function departmentIdsForViewer(viewer: AssetViewer): Promise<string[]> {
  */
 async function visibilityWhere(
   viewer: AssetViewer,
-  opts: { includeBookables?: boolean } = {},
+  opts: { includeBookables?: boolean; allocationContext?: boolean } = {},
 ): Promise<Prisma.AssetWhereInput | undefined> {
   if (viewer.role === 'ADMIN' || viewer.role === 'ASSET_MANAGER') {
     return undefined;
@@ -83,8 +83,8 @@ async function visibilityWhere(
       ? {
           OR: [
             { departmentId: { in: deptIds } },
-            { allocations: { some: { departmentId: { in: deptIds }, status: 'ACTIVE' } } },
-            { allocations: { some: { employee: { departmentId: { in: deptIds } }, status: 'ACTIVE' } } },
+            { allocations: { some: { departmentId: { in: deptIds }, status: { in: ['ACTIVE', 'OVERDUE'] } } } },
+            { allocations: { some: { employee: { departmentId: { in: deptIds } }, status: { in: ['ACTIVE', 'OVERDUE'] } } } },
           ],
         }
       : { id: { in: [] } };
@@ -95,19 +95,26 @@ async function visibilityWhere(
     return deptScope;
   }
 
-  // EMPLOYEE — practical: active + past allocations to this person
+  // EMPLOYEE — directory: own allocations; allocation screen: own + currently held assets for transfer
   const mine: Prisma.AssetWhereInput = {
     allocations: { some: { employeeId: viewer.sub } },
   };
+  if (opts.allocationContext) {
+    return {
+      OR: [
+        mine,
+        { allocations: { some: { status: { in: ['ACTIVE', 'OVERDUE'] } } } },
+      ],
+    };
+  }
   if (opts.includeBookables) {
     return { OR: [mine, { isBookable: true }] };
   }
   return mine;
 }
 
-async function assertCanViewAsset(assetId: string, viewer: AssetViewer): Promise<void> {
-  // Detail / bookings: same directory scope, plus any shared bookable resource
-  const scope = await visibilityWhere(viewer, { includeBookables: true });
+async function assertCanViewAsset(assetId: string, viewer: AssetViewer, opts: { allocationContext?: boolean } = {}): Promise<void> {
+  const scope = await visibilityWhere(viewer, { includeBookables: true, allocationContext: opts.allocationContext });
   if (!scope) {
     const exists = await prisma.asset.findUnique({ where: { id: assetId }, select: { id: true } });
     if (!exists) throw ApiError.notFound('Asset not found');
@@ -301,7 +308,8 @@ export const assetsService = {
     if (and.length) where.AND = and;
 
     const wantsBookables = filter.isBookable === true || filter.isBookable === 'true';
-    const scope = await visibilityWhere(viewer, { includeBookables: wantsBookables });
+    const allocationContext = filter.context === 'allocation';
+    const scope = await visibilityWhere(viewer, { includeBookables: wantsBookables, allocationContext });
 
     return prisma.asset.findMany({
       where: mergeWhere(where, scope),

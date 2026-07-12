@@ -12,7 +12,13 @@ export function initSocket(server: HttpServer): SocketServer {
   io.on('connection', (socket) => {
     // Clients join a room named after their user id to receive targeted notifications.
     socket.on('subscribe', (userId: string) => {
-      if (userId) socket.join(`user:${userId}`);
+      if (!userId || typeof userId !== 'string') return;
+      for (const room of socket.rooms) {
+        if (room.startsWith('user:') && room !== `user:${userId}`) {
+          socket.leave(room);
+        }
+      }
+      socket.join(`user:${userId}`);
     });
   });
 

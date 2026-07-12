@@ -71,6 +71,33 @@ export const orgService = {
     });
   },
 
+  async listEmployeesForAllocation(actor: { id: string; role: Role; departmentId: string | null }, search?: string) {
+    const searchWhere = search
+      ? { OR: [{ name: { contains: search, mode: 'insensitive' as const } }, { email: { contains: search, mode: 'insensitive' as const } }] }
+      : {};
+
+    if (actor.role === 'ADMIN' || actor.role === 'ASSET_MANAGER') {
+      return prisma.employee.findMany({
+        where: { status: 'ACTIVE', ...searchWhere },
+        orderBy: { name: 'asc' },
+        select: { id: true, name: true, email: true, department: { select: { id: true, name: true } } },
+      });
+    }
+
+    if (actor.role === 'DEPARTMENT_HEAD') {
+      const headed = await prisma.department.findMany({ where: { headId: actor.id }, select: { id: true } });
+      const deptIds = [...new Set([...headed.map((d) => d.id), ...(actor.departmentId ? [actor.departmentId] : [])])];
+      if (!deptIds.length) return [];
+      return prisma.employee.findMany({
+        where: { status: 'ACTIVE', departmentId: { in: deptIds }, ...searchWhere },
+        orderBy: { name: 'asc' },
+        select: { id: true, name: true, email: true, department: { select: { id: true, name: true } } },
+      });
+    }
+
+    throw ApiError.forbidden('Not allowed to list employees for allocation');
+  },
+
   // The ONLY place a role is assigned. Restricted to Admin at the route level.
   async updateRole(id: string, role: Role, actorId: string) {
     if (id === actorId && role !== 'ADMIN') {

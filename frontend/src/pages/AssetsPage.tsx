@@ -106,7 +106,7 @@ export default function AssetsPage() {
           </div>
           <p className="border-t border-gray-300 bg-gray-100 px-4 py-2.5 text-xs text-gray-600">
             Click a row to view allocation & maintenance history.
-            {!canManage && user?.role === 'EMPLOYEE' && ' Showing only assets allocated to you.'}
+            {!canManage && user?.role === 'EMPLOYEE' && ' Showing assets allocated to you and bookable resources.'}
             {!canManage && user?.role === 'DEPARTMENT_HEAD' && " Showing only your department's assets."}
           </p>
         </div>
