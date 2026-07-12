@@ -8,6 +8,7 @@ export type Capability =
   | 'org.manage'
   | 'employee.promote'
   | 'asset.register'
+  | 'asset.viewAll'
   | 'asset.allocate'
   | 'transfer.approve'
   | 'transfer.initiate'
@@ -22,6 +23,7 @@ export const PERMISSIONS: Record<Capability, Role[]> = {
   'org.manage': ['ADMIN'],
   'employee.promote': ['ADMIN'],
   'asset.register': ['ADMIN', 'ASSET_MANAGER'],
+  'asset.viewAll': ['ADMIN', 'ASSET_MANAGER'],
   'asset.allocate': ['ADMIN', 'ASSET_MANAGER'],
   'transfer.approve': ['ADMIN', 'ASSET_MANAGER', 'DEPARTMENT_HEAD'],
   'transfer.initiate': ['ADMIN', 'ASSET_MANAGER', 'DEPARTMENT_HEAD', 'EMPLOYEE'],

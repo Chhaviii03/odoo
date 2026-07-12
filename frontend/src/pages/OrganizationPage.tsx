@@ -45,8 +45,16 @@ function DepartmentsTab() {
   });
 
   const toggleStatus = useMutation({
-    mutationFn: (d: { id: string; status: 'ACTIVE' | 'INACTIVE' }) => api(`/departments/${d.id}/status`, { method: 'PATCH', body: { status: d.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['departments'] }),
+    mutationFn: (d: { id: string; status: 'ACTIVE' | 'INACTIVE' }) =>
+      api(`/departments/${d.id}/status`, {
+        method: 'PATCH',
+        body: { status: d.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' },
+      }),
+    onSuccess: (_data, d) => {
+      qc.invalidateQueries({ queryKey: ['departments'] });
+      toast(d.status === 'ACTIVE' ? 'Department deactivated' : 'Department activated', 'success');
+    },
+    onError: (e) => toast(e instanceof ApiError ? e.message : 'Failed to update status', 'error'),
   });
 
   if (isLoading) return <Spinner />;
@@ -66,7 +74,19 @@ function DepartmentsTab() {
               <td className="td">{d.head?.name ?? '—'}</td>
               <td className="td">{d.parent?.name ?? '—'}</td>
               <td className="td">{d._count?.assets ?? 0}</td>
-              <td className="td"><button onClick={() => toggleStatus.mutate({ id: d.id, status: d.status })}><StatusBadge status={d.status} /></button></td>
+              <td className="td">
+                <div className="flex items-center gap-2">
+                  <StatusBadge status={d.status} />
+                  <button
+                    type="button"
+                    className="btn-ghost px-2 py-1 text-xs"
+                    disabled={toggleStatus.isPending}
+                    onClick={() => toggleStatus.mutate({ id: d.id, status: d.status })}
+                  >
+                    {d.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+                  </button>
+                </div>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -74,7 +94,18 @@ function DepartmentsTab() {
 
       <Modal open={open} onClose={() => setOpen(false)} title="New Department">
         <div className="space-y-4">
-          <Field label="Name"><input className="input" value={name} onChange={(e) => setName(e.target.value)} /></Field>
+          <Field label="Name">
+            <input
+              className="input"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Finance"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && name && !create.isPending) create.mutate();
+              }}
+            />
+          </Field>
           <Field label="Department Head">
             <select className="input" value={headId} onChange={(e) => setHeadId(e.target.value)}>
               <option value="">— None —</option>
@@ -87,7 +118,17 @@ function DepartmentsTab() {
               {departments?.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
           </Field>
-          <button className="btn-primary w-full" onClick={() => create.mutate()} disabled={!name || create.isPending}>Create</button>
+          <div className="flex gap-2 pt-2">
+            <button type="button" className="btn-ghost flex-1" onClick={() => setOpen(false)}>Cancel</button>
+            <button
+              type="button"
+              className="btn-primary flex-1"
+              onClick={() => create.mutate()}
+              disabled={!name.trim() || create.isPending}
+            >
+              {create.isPending ? 'Creating…' : 'Create Department'}
+            </button>
+          </div>
         </div>
       </Modal>
     </div>
