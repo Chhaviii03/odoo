@@ -51,7 +51,7 @@ export default function MaintenancePage() {
             </button>
             <button
               type="button"
-              className="flex-1 rounded-lg border border-rose-500/40 bg-rose-500/10 px-2 py-1.5 text-xs font-medium text-rose-300 hover:bg-rose-500/20"
+              className="flex-1 rounded-lg border border-rose-500/40 bg-rose-500/10 px-2 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-500/20"
               disabled={act.isPending}
               onClick={() => act.mutate({ id, action: 'reject' })}
             >
@@ -125,16 +125,16 @@ export default function MaintenancePage() {
       {isLoading ? (
         <div className="px-6"><Spinner /></div>
       ) : (
-        <div className="mx-6 mb-6 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-ink-600 bg-ink-900">
-          <div className="grid min-h-0 flex-1 grid-cols-1 divide-y divide-ink-600 overflow-hidden md:grid-cols-3 md:divide-x md:divide-y-0 xl:grid-cols-5">
+        <div className="mx-6 mb-6 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-gray-300 bg-white">
+          <div className="grid min-h-0 flex-1 grid-cols-1 divide-y divide-gray-300 overflow-hidden md:grid-cols-3 md:divide-x md:divide-y-0 xl:grid-cols-5">
             {COLUMNS.map((col) => {
               const items = requests?.filter((r) => r.status === col.status) ?? [];
               return (
                 <div key={col.status} className="flex min-h-0 min-w-0 flex-col">
-                  <div className="shrink-0 border-b border-ink-700 px-3 py-3">
+                  <div className="shrink-0 border-b border-gray-300 px-3 py-3">
                     <div className="flex items-center justify-between gap-2">
-                      <h3 className="text-sm font-semibold text-white">{col.label}</h3>
-                      <span className="rounded-full bg-ink-800 px-2 py-0.5 text-xs text-slate-400">{items.length}</span>
+                      <h3 className="text-sm font-semibold text-gray-900">{col.label}</h3>
+                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{items.length}</span>
                     </div>
                   </div>
                   <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3">
@@ -146,11 +146,11 @@ export default function MaintenancePage() {
                           className={`shrink-0 rounded-lg border p-3 ${
                             resolved
                               ? 'border-emerald-500/50 bg-emerald-500/10'
-                              : 'border-ink-600 bg-ink-950/40'
+                              : 'border-gray-300 bg-gray-100'
                           }`}
                         >
                           <div className="flex items-start justify-between gap-2">
-                            <p className="text-sm leading-snug text-slate-100">{cardSummary(r)}</p>
+                            <p className="text-sm leading-snug text-gray-900">{cardSummary(r)}</p>
                             <StatusBadge status={r.priority} />
                           </div>
                           {r.photoUrl && (
@@ -158,26 +158,26 @@ export default function MaintenancePage() {
                               <img
                                 src={r.photoUrl}
                                 alt="Issue"
-                                className="h-16 w-full rounded-md border border-ink-600 object-cover"
+                                className="h-16 w-full rounded-md border border-gray-300 object-cover"
                               />
                             </a>
                           )}
                           {r.raisedBy?.name && (
-                            <p className="mt-2 text-[11px] text-slate-500">Raised by {r.raisedBy.name}</p>
+                            <p className="mt-2 text-[11px] text-gray-600">Raised by {r.raisedBy.name}</p>
                           )}
                           {nextAction(r.status, r.id)}
                         </div>
                       );
                     })}
                     {items.length === 0 && (
-                      <p className="py-8 text-center text-xs text-slate-600">No requests</p>
+                      <p className="py-8 text-center text-xs text-gray-700">No requests</p>
                     )}
                   </div>
                 </div>
               );
             })}
           </div>
-          <div className="shrink-0 border-t border-ink-700 px-4 py-3 text-xs text-slate-500">
+          <div className="shrink-0 border-t border-gray-300 px-4 py-3 text-xs text-gray-600">
             Approving a card moves the asset to under maintenance; resolving returns it to available.
             {canApprove && ' Admins and Asset Managers can approve or reject pending requests.'}
           </div>
@@ -256,7 +256,7 @@ function RaiseModal({ onClose }: { onClose: () => void }) {
           </Field>
           <Field label="Attach Photo">
             <input
-              className="input file:mr-3 file:rounded file:border-0 file:bg-ink-700 file:px-2 file:py-1 file:text-xs file:text-slate-200"
+              className="input file:mr-3 file:rounded file:border-0 file:bg-gray-200 file:px-2 file:py-1 file:text-xs file:text-gray-800"
               type="file"
               accept="image/*"
               onChange={onPhotoChange}
@@ -265,11 +265,11 @@ function RaiseModal({ onClose }: { onClose: () => void }) {
           </Field>
         </div>
         {photoUrl && (
-          <div className="flex items-center gap-3 rounded-lg border border-ink-700 bg-ink-800/40 p-2">
-            <img src={photoUrl} alt="Issue preview" className="h-16 w-16 rounded-md border border-ink-600 object-cover" />
+          <div className="flex items-center gap-3 rounded-lg border border-gray-300 bg-gray-100 p-2">
+            <img src={photoUrl} alt="Issue preview" className="h-16 w-16 rounded-md border border-gray-300 object-cover" />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xs text-slate-400">{photoUrl}</p>
-              <button type="button" className="mt-1 text-xs text-rose-300 hover:underline" onClick={() => setPhotoUrl(undefined)}>
+              <p className="truncate text-xs text-gray-600">{photoUrl}</p>
+              <button type="button" className="mt-1 text-xs text-rose-700 hover:underline" onClick={() => setPhotoUrl(undefined)}>
                 Remove photo
               </button>
             </div>

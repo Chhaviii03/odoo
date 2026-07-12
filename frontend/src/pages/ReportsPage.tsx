@@ -6,11 +6,11 @@ import { PageHeader, Spinner } from '../components/ui';
 import { toast } from '../lib/toast';
 
 const CHART_COLORS = {
-  grid: '#2a3340',
-  text: '#94a3b8',
-  bar: '#7c5cff',
-  bar2: '#38bdf8',
-  line: '#34d399',
+  grid: '#E6E9ED',
+  text: '#6C757D',
+  bar: '#714b67',
+  bar2: '#017e84',
+  line: '#28a745',
 };
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -28,17 +28,17 @@ const EXPORT_OPTIONS = [
 type ExportType = (typeof EXPORT_OPTIONS)[number]['value'];
 
 function heatColor(count: number, max: number) {
-  if (!count || max <= 0) return 'rgba(42, 51, 64, 0.45)';
+  if (!count || max <= 0) return 'rgba(230, 233, 237, 0.8)';
   const t = Math.min(1, count / max);
-  const alpha = 0.25 + t * 0.75;
-  return `rgba(124, 92, 255, ${alpha})`;
+  const alpha = 0.2 + t * 0.8;
+  return `rgba(113, 75, 103, ${alpha})`;
 }
 
 function ExportLink({ type, label = 'CSV' }: { type: ExportType; label?: string }) {
   return (
     <button
       type="button"
-      className="text-xs font-medium text-accent-soft hover:text-white"
+      className="text-xs font-medium text-accent-soft hover:text-gray-900"
       onClick={() => void downloadExport(type)}
     >
       Export {label}
@@ -127,7 +127,7 @@ export default function ReportsPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="card p-5">
           <div className="mb-4 flex items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold text-white">Allocation by Department</h3>
+            <h3 className="text-sm font-semibold text-gray-900">Allocation by Department</h3>
             <ExportLink type="department" />
           </div>
           <ResponsiveContainer width="100%" height={240}>
@@ -135,7 +135,7 @@ export default function ReportsPage() {
               <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
               <XAxis dataKey="name" stroke={CHART_COLORS.text} fontSize={12} />
               <YAxis stroke={CHART_COLORS.text} fontSize={12} allowDecimals={false} />
-              <Tooltip contentStyle={{ background: '#161b24', border: '1px solid #2a3340', borderRadius: 8 }} />
+              <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #E6E9ED', borderRadius: 10, color: '#374151' }} />
               <Legend wrapperStyle={{ fontSize: 12, color: CHART_COLORS.text }} />
               <Bar dataKey="allocations" name="Active allocations" fill={CHART_COLORS.bar} radius={[4, 4, 0, 0]} />
               <Bar dataKey="assets" name="Owned assets" fill={CHART_COLORS.bar2} radius={[4, 4, 0, 0]} />
@@ -145,7 +145,7 @@ export default function ReportsPage() {
 
         <div className="card p-5">
           <div className="mb-4 flex items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold text-white">Maintenance Frequency (top assets)</h3>
+            <h3 className="text-sm font-semibold text-gray-900">Maintenance Frequency (top assets)</h3>
             <ExportLink type="maintenance" />
           </div>
           {maintData.length ? (
@@ -154,24 +154,24 @@ export default function ReportsPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
                 <XAxis dataKey="name" stroke={CHART_COLORS.text} fontSize={12} />
                 <YAxis stroke={CHART_COLORS.text} fontSize={12} allowDecimals={false} />
-                <Tooltip contentStyle={{ background: '#161b24', border: '1px solid #2a3340', borderRadius: 8 }} />
+                <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #E6E9ED', borderRadius: 10, color: '#374151' }} />
                 <Line type="monotone" dataKey="count" stroke={CHART_COLORS.line} strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
-          ) : <p className="py-16 text-center text-sm text-slate-500">No maintenance data yet.</p>}
+          ) : <p className="py-16 text-center text-sm text-gray-600">No maintenance data yet.</p>}
         </div>
 
         <div className="card p-5">
           <div className="mb-3 flex items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold text-white">Most-used Assets</h3>
+            <h3 className="text-sm font-semibold text-gray-900">Most-used Assets</h3>
             <ExportLink type="utilization" />
           </div>
           <div className="space-y-2">
-            {mostUsed.length === 0 && <p className="py-8 text-center text-sm text-slate-500">No usage recorded yet.</p>}
+            {mostUsed.length === 0 && <p className="py-8 text-center text-sm text-gray-600">No usage recorded yet.</p>}
             {mostUsed.map((a: any) => (
-              <div key={a.id} className="flex items-center justify-between rounded-lg bg-ink-800/60 px-3 py-2 text-sm">
-                <span className="text-slate-200"><span className="font-mono text-accent-soft">{a.assetTag}</span> · {a.name}</span>
-                <span className="text-slate-400">{a.usage} {a.usage === 1 ? 'use' : 'uses'}</span>
+              <div key={a.id} className="flex items-center justify-between rounded-lg bg-gray-100 px-3 py-2 text-sm">
+                <span className="text-gray-800"><span className="font-mono text-accent-soft">{a.assetTag}</span> · {a.name}</span>
+                <span className="text-gray-600">{a.usage} {a.usage === 1 ? 'use' : 'uses'}</span>
               </div>
             ))}
           </div>
@@ -179,26 +179,26 @@ export default function ReportsPage() {
 
         <div className="card p-5">
           <div className="mb-3 flex items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold text-white">Idle Assets & Due / Nearing Retirement</h3>
+            <h3 className="text-sm font-semibold text-gray-900">Idle Assets & Due / Nearing Retirement</h3>
             <ExportLink type="upcoming" />
           </div>
           <div className="space-y-2 text-sm">
-            <p className="text-xs uppercase tracking-wide text-slate-500">Idle — never used ({util.idle.length})</p>
-            {idle.length === 0 && <p className="text-slate-500">No idle assets.</p>}
+            <p className="text-xs uppercase tracking-wide text-gray-600">Idle — never used ({util.idle.length})</p>
+            {idle.length === 0 && <p className="text-gray-600">No idle assets.</p>}
             {idle.map((a: any) => (
-              <p key={a.id} className="text-slate-300"><span className="font-mono text-accent-soft">{a.assetTag}</span> · {a.name}</p>
+              <p key={a.id} className="text-gray-700"><span className="font-mono text-accent-soft">{a.assetTag}</span> · {a.name}</p>
             ))}
 
-            <p className="mt-3 text-xs uppercase tracking-wide text-slate-500">Under maintenance</p>
-            {underMaint.length === 0 && <p className="text-slate-500">None currently.</p>}
+            <p className="mt-3 text-xs uppercase tracking-wide text-gray-600">Under maintenance</p>
+            {underMaint.length === 0 && <p className="text-gray-600">None currently.</p>}
             {underMaint.map((a: any) => (
-              <p key={a.id} className="text-rose-300"><span className="font-mono">{a.assetTag}</span> · {a.name}</p>
+              <p key={a.id} className="text-rose-700"><span className="font-mono">{a.assetTag}</span> · {a.name}</p>
             ))}
 
-            <p className="mt-3 text-xs uppercase tracking-wide text-slate-500">Nearing retirement (Poor/Fair)</p>
-            {nearing.length === 0 && <p className="text-slate-500">None flagged.</p>}
+            <p className="mt-3 text-xs uppercase tracking-wide text-gray-600">Nearing retirement (Poor/Fair)</p>
+            {nearing.length === 0 && <p className="text-gray-600">None flagged.</p>}
             {nearing.map((a: any) => (
-              <p key={a.id} className="text-amber-300"><span className="font-mono">{a.assetTag}</span> · {a.name} ({a.condition})</p>
+              <p key={a.id} className="text-amber-700"><span className="font-mono">{a.assetTag}</span> · {a.name} ({a.condition})</p>
             ))}
           </div>
         </div>
@@ -207,16 +207,16 @@ export default function ReportsPage() {
       <div className="card mt-6 p-5">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
           <div>
-            <h3 className="text-sm font-semibold text-white">Resource Booking Heatmap</h3>
-            <p className="mt-1 text-xs text-slate-500">Peak usage windows by day of week and hour</p>
+            <h3 className="text-sm font-semibold text-gray-900">Resource Booking Heatmap</h3>
+            <p className="mt-1 text-xs text-gray-600">Peak usage windows by day of week and hour</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <ExportLink type="heatmap" />
-            <div className="flex items-center gap-2 text-xs text-slate-500">
+            <div className="flex items-center gap-2 text-xs text-gray-600">
               <span>Low</span>
               <div className="flex gap-0.5">
                 {[0.25, 0.45, 0.65, 0.85, 1].map((a) => (
-                  <span key={a} className="h-3 w-4 rounded-sm" style={{ background: `rgba(124, 92, 255, ${a})` }} />
+                  <span key={a} className="h-3 w-4 rounded-sm" style={{ background: `rgba(113, 75, 103, ${a})` }} />
                 ))}
               </div>
               <span>High</span>
@@ -225,25 +225,28 @@ export default function ReportsPage() {
         </div>
 
         {!heatmap?.length ? (
-          <p className="py-12 text-center text-sm text-slate-500">No booking activity to chart yet.</p>
+          <p className="py-12 text-center text-sm text-gray-600">No booking activity to chart yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <div className="inline-grid min-w-full gap-1" style={{ gridTemplateColumns: `48px repeat(${HEATMAP_HOURS.length}, minmax(36px, 1fr))` }}>
               <div />
               {HEATMAP_HOURS.map((h) => (
-                <div key={h} className="pb-1 text-center text-[10px] text-slate-500">{h}:00</div>
+                <div key={h} className="pb-1 text-center text-[10px] text-gray-600">{h}:00</div>
               ))}
               {DAY_LABELS.map((label, day) => (
                 <div key={label} className="contents">
-                  <div className="flex items-center text-xs text-slate-400">{label}</div>
+                  <div className="flex items-center text-xs text-gray-600">{label}</div>
                   {HEATMAP_HOURS.map((hour) => {
                     const count = heatMap.map.get(`${day}-${hour}`) ?? 0;
                     return (
                       <div
                         key={`${day}-${hour}`}
                         title={`${label} ${hour}:00 — ${count} booking${count === 1 ? '' : 's'}`}
-                        className="flex h-8 items-center justify-center rounded-md text-[10px] font-medium text-white/90"
-                        style={{ background: heatColor(count, heatMap.max) }}
+                        className="flex h-8 items-center justify-center rounded-md text-[10px] font-medium"
+                        style={{
+                          background: heatColor(count, heatMap.max),
+                          color: count / Math.max(heatMap.max, 1) > 0.45 ? '#ffffff' : '#212529',
+                        }}
                       >
                         {count > 0 ? count : ''}
                       </div>

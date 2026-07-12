@@ -37,17 +37,17 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="grid min-h-screen place-items-center bg-ink-950 p-4">
+    <div className="grid min-h-screen place-items-center bg-[#F8F9FA] p-4">
       <div className="w-full max-w-sm">
         <div className="card p-7">
           <div className="mb-5 flex flex-col items-center">
-            <div className="grid h-12 w-12 place-items-center rounded-full border border-ink-600 text-sm font-bold text-white">AF</div>
-            <h1 className="mt-3 text-xl font-semibold text-white">Set a new password</h1>
-            <p className="mt-2 text-center text-xs text-slate-400">Choose a new password for your AssetFlow account.</p>
+            <div className="grid h-12 w-12 place-items-center rounded-full border border-gray-300 bg-white text-sm font-bold text-primary">AF</div>
+            <h1 className="mt-3 text-xl font-semibold text-gray-900">Set a new password</h1>
+            <p className="mt-2 text-center text-xs text-gray-600">Choose a new password for your AssetFlow account.</p>
           </div>
 
           {!token ? (
-            <div className="space-y-4 text-sm text-slate-300">
+            <div className="space-y-4 text-sm text-gray-700">
               <p>This reset link is missing or invalid.</p>
               <Link to="/login" className="btn-primary inline-flex w-full">Back to login</Link>
             </div>

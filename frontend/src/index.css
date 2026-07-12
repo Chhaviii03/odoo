@@ -3,52 +3,192 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
+
+  /* Brand — Odoo */
+  --primary: #714b67;
+  --primary-hover: #432c3d;
+  --secondary: #017e84;
+  --success: #28a745;
+  --info: #17a2b8;
+  --warning: #ffc107;
+  --danger: #dc3545;
+  --light: #f9f9f9;
+  --dark: #212529;
+
+  /* Grayscale */
+  --gray-100: #f9fafb;
+  --gray-200: #f3f4f6;
+  --gray-300: #e6e9ed;
+  --gray-400: #d8dadd;
+  --gray-500: #6c757d;
+  --gray-600: #495057;
+  --gray-700: #374151;
+  --gray-800: #212529;
+  --gray-900: #111827;
+
+  /* Text & surfaces */
+  --body-color: #212529;
+  --body-bg: #ffffff;
+  --surface: #f8f9fa;
+  --heading-color: #111827;
+  --muted-color: #495057;
+  --link-color: #714b67;
+  --link-hover-color: #432c3d;
+  --border-color: #e6e9ed;
+  --overlay: rgba(33, 37, 41, 0.35);
+
+  /* Shape / spacing */
+  --border-radius: 0.625rem;
+  --border-radius-sm: 0.25rem;
+  --border-radius-lg: 1.25rem;
+  --border-radius-pill: 50rem;
+  --box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+  --btn-padding-y: 0.75rem;
+  --btn-padding-x: 1.5rem;
 }
 
 html,
 body,
 #root {
   height: 100%;
+  background-color: #f8f9fa;
 }
 
 body {
-  @apply bg-ink-950 text-slate-200 font-sans antialiased;
+  @apply font-sans font-normal antialiased;
+  color: var(--body-color);
+  background-color: #f8f9fa;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--heading-color);
+  font-weight: 600;
+}
+
+a {
+  color: var(--link-color);
+}
+
+a:hover {
+  color: var(--link-hover-color);
 }
 
 @layer components {
   .card {
-    @apply rounded-2xl border border-ink-700 bg-ink-900/80 backdrop-blur;
+    @apply rounded-lg border bg-white;
+    border-color: var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
   }
+
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+    border-radius: var(--border-radius-sm);
+    padding: var(--btn-padding-y) var(--btn-padding-x);
   }
+
   .btn-primary {
-    @apply btn bg-accent text-white hover:bg-accent-soft;
+    @apply btn;
+    background-color: var(--primary);
+    color: #ffffff;
   }
+
+  .btn-primary:hover {
+    background-color: var(--primary-hover);
+  }
+
+  .btn-secondary {
+    @apply btn;
+    background-color: #eff3f6;
+    color: var(--primary);
+  }
+
+  .btn-secondary:hover {
+    background-color: #e6e9ed;
+  }
+
   .btn-ghost {
-    @apply btn border border-ink-600 bg-ink-800 text-slate-200 hover:border-ink-500 hover:bg-ink-700;
+    @apply btn border bg-white;
+    border-color: var(--border-color);
+    color: var(--body-color);
+    border-radius: var(--border-radius-sm);
   }
+
+  .btn-ghost:hover {
+    background-color: var(--gray-100);
+    border-color: var(--gray-400);
+  }
+
   .btn-danger {
-    @apply btn bg-rose-600 text-white hover:bg-rose-500;
+    @apply btn;
+    background-color: var(--danger);
+    color: #ffffff;
   }
+
+  .btn-danger:hover {
+    filter: brightness(0.92);
+  }
+
   .input {
-    @apply w-full rounded-lg border border-ink-600 bg-ink-800 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 outline-none focus:border-accent;
+    @apply w-full bg-white text-sm outline-none;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    color: var(--body-color);
+    padding: 0.5rem 0.75rem;
   }
+
+  .input::placeholder {
+    color: var(--gray-500);
+  }
+
+  .input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent);
+  }
+
   .label {
-    @apply mb-1 block text-xs font-medium uppercase tracking-wide text-slate-400;
+    @apply mb-1 block text-xs font-medium uppercase tracking-wide;
+    color: var(--muted-color);
   }
+
   .th {
-    @apply px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-400;
+    @apply px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide;
+    color: var(--muted-color);
   }
+
   .td {
-    @apply px-4 py-3 text-sm text-slate-200;
+    @apply px-4 py-3 text-sm;
+    color: var(--body-color);
   }
+
   .tab {
-    @apply rounded-lg px-3.5 py-2 text-sm font-medium text-slate-400 hover:text-slate-100;
+    @apply px-3.5 py-2 text-sm font-medium;
+    border-radius: var(--border-radius-sm);
+    color: var(--muted-color);
   }
+
+  .tab:hover {
+    color: var(--heading-color);
+  }
+
   .tab-active {
-    @apply bg-ink-700 text-white;
+    background-color: color-mix(in srgb, var(--primary) 15%, transparent);
+    color: var(--primary);
+  }
+
+  input[type='checkbox'],
+  input[type='radio'] {
+    accent-color: var(--primary);
+  }
+
+  .overlay {
+    background-color: var(--overlay);
   }
 }
 
@@ -57,7 +197,8 @@ body {
   height: 10px;
 }
 ::-webkit-scrollbar-thumb {
-  @apply rounded-full bg-ink-600;
+  border-radius: var(--border-radius-pill);
+  background-color: var(--gray-400);
 }
 ::-webkit-scrollbar-track {
   @apply bg-transparent;
@@ -73,11 +214,13 @@ body {
 }
 
 .timeline-scroll::-webkit-scrollbar-thumb {
-  @apply rounded-full bg-ink-500;
+  border-radius: var(--border-radius-pill);
+  background-color: var(--gray-500);
 }
 
 .timeline-scroll::-webkit-scrollbar-track {
-  @apply rounded-full bg-ink-800/80;
+  border-radius: var(--border-radius-pill);
+  background-color: var(--gray-200);
 }
 
 @keyframes toast-in {
@@ -93,4 +236,42 @@ body {
 
 .toast-in {
   animation: toast-in 0.2s ease-out;
+}
+
+/*
+ * Unlayered so these beat Tailwind utilities.
+ * Force readable dark text on the light Odoo theme.
+ */
+.text-white {
+  color: var(--heading-color);
+}
+
+.text-slate-100,
+.text-slate-200,
+.text-slate-300 {
+  color: #212529;
+}
+
+.text-slate-400,
+.text-slate-500,
+.text-slate-600,
+.text-gray-500,
+.text-gray-600 {
+  color: #495057;
+}
+
+.text-xs.text-slate-400,
+.text-xs.text-slate-500,
+.text-sm.text-slate-400,
+.text-sm.text-slate-500 {
+  color: #495057;
+}
+
+.bg-accent.text-white,
+.bg-primary.text-white,
+.bg-rose-500.text-white,
+.bg-rose-600.text-white,
+.btn-primary,
+.btn-danger {
+  color: #ffffff;
 }

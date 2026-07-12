@@ -19,17 +19,17 @@ export default function AuditPage() {
       <PageHeader title="Asset Audit" subtitle="Structured verification cycles with auto-generated discrepancy reports" actions={canManage && <button className="btn-primary" onClick={() => setCreateOpen(true)}>+ New Audit Cycle</button>} />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="card overflow-hidden">
-          <div className="border-b border-ink-700 px-4 py-3 text-sm font-semibold text-white">Audit Cycles</div>
+          <div className="border-b border-gray-300 px-4 py-3 text-sm font-semibold text-gray-900">Audit Cycles</div>
           {isLoading ? <Spinner /> : !cycles?.length ? <EmptyState title="No audit cycles" /> : (
-            <div className="divide-y divide-ink-800">
+            <div className="divide-y divide-gray-200">
               {cycles.map((c) => {
                 const auditors = (c.assignments ?? []).map((a: any) => a.auditor?.name).filter(Boolean);
                 return (
-                  <button key={c.id} onClick={() => setSelectedId(c.id)} className={`flex w-full items-start justify-between gap-2 px-4 py-3 text-left hover:bg-ink-800/50 ${selectedId === c.id ? 'bg-ink-800' : ''}`}>
+                  <button key={c.id} onClick={() => setSelectedId(c.id)} className={`flex w-full items-start justify-between gap-2 px-4 py-3 text-left hover:bg-gray-100 ${selectedId === c.id ? 'bg-gray-100' : ''}`}>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-100">{c.name}</p>
-                      <p className="text-xs text-slate-500">{fmtDate(c.startDate)} – {fmtDate(c.endDate)} · {c._count?.items ?? 0} items</p>
-                      <p className="mt-0.5 truncate text-xs text-slate-500">
+                      <p className="text-sm font-medium text-gray-900">{c.name}</p>
+                      <p className="text-xs text-gray-600">{fmtDate(c.startDate)} – {fmtDate(c.endDate)} · {c._count?.items ?? 0} items</p>
+                      <p className="mt-0.5 truncate text-xs text-gray-600">
                         {auditors.length ? `Auditors: ${auditors.join(', ')}` : 'No auditors assigned'}
                       </p>
                     </div>
@@ -81,13 +81,13 @@ function CycleDetail({ cycleId, canManage }: { cycleId: string; canManage: boole
       {cycle && (
         <div className="card flex flex-wrap items-center justify-between gap-2 p-4">
           <div>
-            <p className="text-sm font-semibold text-white">{cycle.name}</p>
-            <p className="mt-0.5 text-xs text-slate-400">
-              Auditors: {auditors.length ? auditors.map((a: any) => a.name).join(', ') : <span className="text-slate-500">none assigned</span>}
+            <p className="text-sm font-semibold text-gray-900">{cycle.name}</p>
+            <p className="mt-0.5 text-xs text-gray-600">
+              Auditors: {auditors.length ? auditors.map((a: any) => a.name).join(', ') : <span className="text-gray-600">none assigned</span>}
             </p>
           </div>
           {!closed && !canVerify && (
-            <span className="rounded-lg border border-ink-600 bg-ink-800 px-3 py-1 text-xs text-slate-400">
+            <span className="rounded-lg border border-gray-300 bg-gray-100 px-3 py-1 text-xs text-gray-600">
               View only — you are not an assigned auditor
             </span>
           )}
@@ -96,27 +96,27 @@ function CycleDetail({ cycleId, canManage }: { cycleId: string; canManage: boole
 
       {discrepancies.length > 0 && (
         <div className="card border-orange-500/40 bg-orange-500/10 p-4">
-          <p className="text-sm font-semibold text-orange-200">Discrepancy report — {discrepancies.length} flagged item{discrepancies.length > 1 ? 's' : ''} (auto-generated)</p>
+          <p className="text-sm font-semibold text-orange-800">Discrepancy report — {discrepancies.length} flagged item{discrepancies.length > 1 ? 's' : ''} (auto-generated)</p>
           <div className="mt-2 space-y-1">
             {discrepancies.map((d) => (
-              <p key={d.id} className="text-xs text-orange-200/80">{d.asset?.assetTag} · {d.asset?.name} — {d.verificationStatus}</p>
+              <p key={d.id} className="text-xs text-orange-800/80">{d.asset?.assetTag} · {d.asset?.name} — {d.verificationStatus}</p>
             ))}
           </div>
         </div>
       )}
 
       <div className="card overflow-hidden">
-        <div className="flex items-center justify-between border-b border-ink-700 px-4 py-3">
-          <h3 className="text-sm font-semibold text-white">Audit Items</h3>
+        <div className="flex items-center justify-between border-b border-gray-300 px-4 py-3">
+          <h3 className="text-sm font-semibold text-gray-900">Audit Items</h3>
           {canManage && !closed && <button className="btn-danger px-3 py-1.5 text-xs" onClick={() => close.mutate()}>Close Cycle</button>}
         </div>
         <table className="w-full">
-          <thead className="border-b border-ink-700"><tr><th className="th">Asset</th><th className="th">Expected Location</th><th className="th">Verification</th><th className="th">Action</th></tr></thead>
-          <tbody className="divide-y divide-ink-800">
+          <thead className="border-b border-gray-300"><tr><th className="th">Asset</th><th className="th">Expected Location</th><th className="th">Verification</th><th className="th">Action</th></tr></thead>
+          <tbody className="divide-y divide-gray-200">
             {items?.map((i) => (
               <tr key={i.id}>
                 <td className="td"><span className="font-mono text-accent-soft">{i.asset?.assetTag}</span> · {i.asset?.name}</td>
-                <td className="td text-slate-400">{i.expectedLocation ?? '—'}</td>
+                <td className="td text-gray-600">{i.expectedLocation ?? '—'}</td>
                 <td className="td"><StatusBadge status={i.verificationStatus} /></td>
                 <td className="td">
                   {!closed && canVerify ? (
@@ -175,7 +175,7 @@ function CreateCycleModal({ onClose }: { onClose: () => void }) {
         <span className="label">Assign Auditors</span>
         <div className="flex flex-wrap gap-2">
           {employees.map((e) => (
-            <button key={e.id} onClick={() => toggleAuditor(e.id)} className={`rounded-lg border px-3 py-1.5 text-xs ${form.auditorIds.includes(e.id) ? 'border-accent bg-accent/15 text-accent-soft' : 'border-ink-600 bg-ink-800 text-slate-300'}`}>{e.name}</button>
+            <button key={e.id} onClick={() => toggleAuditor(e.id)} className={`rounded-lg border px-3 py-1.5 text-xs ${form.auditorIds.includes(e.id) ? 'border-accent bg-accent/15 text-accent-soft' : 'border-gray-300 bg-gray-100 text-gray-700'}`}>{e.name}</button>
           ))}
         </div>
       </div>

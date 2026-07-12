@@ -42,16 +42,16 @@ export default function ActivityPage() {
 
       <div className={clsx('grid gap-6', canViewLogs ? 'lg:grid-cols-2' : 'grid-cols-1')}>
         <div className="card p-5">
-          <h3 className="mb-3 text-sm font-semibold text-white">Notifications</h3>
+          <h3 className="mb-3 text-sm font-semibold text-gray-900">Notifications</h3>
           {isLoading ? <Spinner /> : !filtered.length ? <EmptyState title="Nothing here" /> : (
             <div className="space-y-2">
               {filtered.map((n) => (
-                <button key={n.id} onClick={() => !n.isRead && markRead.mutate(n.id)} className={clsx('flex w-full items-start justify-between rounded-lg px-3 py-2 text-left text-sm', n.isRead ? 'bg-ink-800/40 text-slate-400' : 'bg-ink-800 text-slate-100')}>
+                <button key={n.id} onClick={() => !n.isRead && markRead.mutate(n.id)} className={clsx('flex w-full items-start justify-between rounded-lg px-3 py-2 text-left text-sm', n.isRead ? 'bg-gray-100 text-gray-600' : 'bg-gray-100 text-gray-900')}>
                   <div>
                     <p className="text-xs uppercase tracking-wide text-accent-soft">{humanize(n.type)}</p>
                     <p>{n.message}</p>
                   </div>
-                  <span className="shrink-0 pl-3 text-[11px] text-slate-500">{ago(n.createdAt)}</span>
+                  <span className="shrink-0 pl-3 text-[11px] text-gray-600">{ago(n.createdAt)}</span>
                 </button>
               ))}
             </div>
@@ -68,13 +68,13 @@ function ActivityLog() {
   const { data: logs, isLoading } = useQuery({ queryKey: ['activity-logs'], queryFn: () => api<any[]>('/activity-logs') });
   return (
     <div className="card p-5">
-      <h3 className="mb-3 text-sm font-semibold text-white">Audit Log — who did what, when</h3>
+      <h3 className="mb-3 text-sm font-semibold text-gray-900">Audit Log — who did what, when</h3>
       {isLoading ? <Spinner /> : !logs?.length ? <EmptyState title="No activity logged yet" /> : (
         <div className="max-h-[70vh] space-y-2 overflow-y-auto">
           {logs.map((l) => (
-            <div key={l.id} className="rounded-lg bg-ink-800/40 px-3 py-2 text-sm">
-              <p className="text-slate-200"><span className="text-accent-soft">{l.user?.name ?? 'System'}</span> · {humanize(l.action)}</p>
-              <p className="text-[11px] text-slate-500">{l.entityType} · {ago(l.createdAt)}</p>
+            <div key={l.id} className="rounded-lg bg-gray-100 px-3 py-2 text-sm">
+              <p className="text-gray-800"><span className="text-accent-soft">{l.user?.name ?? 'System'}</span> · {humanize(l.action)}</p>
+              <p className="text-[11px] text-gray-600">{l.entityType} · {ago(l.createdAt)}</p>
             </div>
           ))}
         </div>

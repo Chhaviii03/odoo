@@ -73,11 +73,11 @@ export default function AssetsPage() {
       ) : !assets?.length ? (
         <EmptyState title={emptyTitle} hint={emptyHint} />
       ) : (
-        <div className="overflow-hidden rounded-xl border border-ink-700 bg-ink-900">
+        <div className="overflow-hidden rounded-xl border border-gray-300 bg-white shadow-soft">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px]">
               <thead>
-                <tr className="border-b border-ink-700 bg-ink-950/60">
+                <tr className="border-b border-gray-300 bg-gray-100">
                   <th className="th">Tag</th>
                   <th className="th">Name</th>
                   <th className="th">Category</th>
@@ -86,25 +86,25 @@ export default function AssetsPage() {
                   <th className="th">Bookable</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-ink-800/80">
+              <tbody className="divide-y divide-gray-200">
                 {assets.map((a) => (
                   <tr
                     key={a.id}
-                    className="cursor-pointer transition-colors hover:bg-ink-800/40"
+                    className="cursor-pointer transition-colors hover:bg-gray-100"
                     onClick={() => setDetailId(a.id)}
                   >
-                    <td className="td font-mono text-sm text-accent-soft">{a.assetTag}</td>
-                    <td className="td font-medium text-white">{a.name}</td>
-                    <td className="td text-slate-400">{a.category?.name}</td>
+                    <td className="td font-mono text-sm font-medium text-primary">{a.assetTag}</td>
+                    <td className="td font-medium text-gray-900">{a.name}</td>
+                    <td className="td text-gray-700">{a.category?.name}</td>
                     <td className="td"><StatusBadge status={a.status} /></td>
-                    <td className="td text-slate-400">{a.location ?? '—'}</td>
-                    <td className="td text-slate-400">{a.isBookable ? 'Yes' : '—'}</td>
+                    <td className="td text-gray-700">{a.location ?? '—'}</td>
+                    <td className="td text-gray-700">{a.isBookable ? 'Yes' : '—'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <p className="border-t border-ink-800 px-4 py-2.5 text-xs text-slate-500">
+          <p className="border-t border-gray-300 bg-gray-100 px-4 py-2.5 text-xs text-gray-600">
             Click a row to view allocation & maintenance history.
             {!canManage && user?.role === 'EMPLOYEE' && ' Showing only assets allocated to you.'}
             {!canManage && user?.role === 'DEPARTMENT_HEAD' && " Showing only your department's assets."}
@@ -197,7 +197,7 @@ function RegisterModal({ onClose }: { onClose: () => void }) {
 
   return (
     <Modal open onClose={onClose} title="Register Asset" wide>
-      <p className="mb-4 text-xs text-slate-500">Asset Tag is auto-generated (e.g. AF-0008). QR defaults to the same tag if left blank.</p>
+      <p className="mb-4 text-xs text-gray-600">Asset Tag is auto-generated (e.g. AF-0008). QR defaults to the same tag if left blank.</p>
       <div className="grid grid-cols-2 gap-4">
         <Field label="Name"><input className="input" value={form.name ?? ''} onChange={(e) => set('name', e.target.value)} /></Field>
         <Field label="Category">
@@ -228,29 +228,29 @@ function RegisterModal({ onClose }: { onClose: () => void }) {
             ))}
           </select>
         </Field>
-        <label className="flex items-end gap-2 pb-2 text-sm text-slate-300">
+        <label className="flex items-end gap-2 pb-2 text-sm text-gray-700">
           <input type="checkbox" checked={!!form.isBookable} onChange={(e) => set('isBookable', e.target.checked)} />
           Shared / bookable resource
         </label>
 
-        <div className="col-span-2 grid grid-cols-2 gap-4 border-t border-ink-700 pt-4">
+        <div className="col-span-2 grid grid-cols-2 gap-4 border-t border-gray-300 pt-4">
           <Field label="Photo">
-            <input className="input file:mr-3 file:rounded file:border-0 file:bg-ink-700 file:px-2 file:py-1 file:text-xs file:text-slate-200" type="file" accept="image/*" onChange={onPhotoChange} disabled={uploading} />
+            <input className="input file:mr-3 file:rounded file:border-0 file:bg-gray-200 file:px-2 file:py-1 file:text-xs file:text-gray-800" type="file" accept="image/*" onChange={onPhotoChange} disabled={uploading} />
             {form.photoUrl && (
               <div className="mt-2 flex items-center gap-3">
-                <img src={form.photoUrl} alt="Asset preview" className="h-16 w-16 rounded-lg object-cover border border-ink-600" />
-                <button type="button" className="text-xs text-rose-300 hover:underline" onClick={() => set('photoUrl', undefined)}>Remove</button>
+                <img src={form.photoUrl} alt="Asset preview" className="h-16 w-16 rounded-lg border border-gray-300 object-cover" />
+                <button type="button" className="text-xs text-rose-700 hover:underline" onClick={() => set('photoUrl', undefined)}>Remove</button>
               </div>
             )}
           </Field>
           <Field label="Documents">
-            <input className="input file:mr-3 file:rounded file:border-0 file:bg-ink-700 file:px-2 file:py-1 file:text-xs file:text-slate-200" type="file" multiple accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.txt" onChange={onDocumentsChange} disabled={uploading} />
+            <input className="input file:mr-3 file:rounded file:border-0 file:bg-gray-200 file:px-2 file:py-1 file:text-xs file:text-gray-800" type="file" multiple accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.txt" onChange={onDocumentsChange} disabled={uploading} />
             {(form.documentUrls as string[])?.length > 0 && (
               <ul className="mt-2 space-y-1">
                 {(form.documentUrls as string[]).map((url) => (
-                  <li key={url} className="flex items-center justify-between rounded bg-ink-800/60 px-2 py-1 text-xs text-slate-300">
-                    <a href={url} target="_blank" rel="noreferrer" className="truncate text-accent-soft hover:underline">{url.split('/').pop()}</a>
-                    <button type="button" className="ml-2 text-rose-300" onClick={() => removeDocument(url)}>✕</button>
+                  <li key={url} className="flex items-center justify-between rounded border border-gray-300 bg-gray-100 px-2 py-1 text-xs text-gray-700">
+                    <a href={url} target="_blank" rel="noreferrer" className="truncate text-primary hover:underline">{url.split('/').pop()}</a>
+                    <button type="button" className="ml-2 text-rose-700" onClick={() => removeDocument(url)}>✕</button>
                   </li>
                 ))}
               </ul>
@@ -294,15 +294,15 @@ function AssetDetail({ id, onClose }: { id: string; onClose: () => void }) {
 
           {(asset.photoUrl || (asset.documentUrls?.length ?? 0) > 0) && (
             <div>
-              <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Photo & Documents</h4>
+              <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-600">Photo & Documents</h4>
               <div className="flex flex-wrap gap-3">
                 {asset.photoUrl && (
                   <a href={asset.photoUrl} target="_blank" rel="noreferrer">
-                    <img src={asset.photoUrl} alt={asset.name} className="h-24 w-24 rounded-lg border border-ink-600 object-cover" />
+                    <img src={asset.photoUrl} alt={asset.name} className="h-24 w-24 rounded-lg border border-gray-300 object-cover" />
                   </a>
                 )}
                 {asset.documentUrls?.map((url) => (
-                  <a key={url} href={url} target="_blank" rel="noreferrer" className="rounded-lg border border-ink-600 bg-ink-800 px-3 py-2 text-xs text-accent-soft hover:underline">
+                  <a key={url} href={url} target="_blank" rel="noreferrer" className="rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-xs font-medium text-primary hover:underline">
                     {url.split('/').pop()}
                   </a>
                 ))}
@@ -311,48 +311,48 @@ function AssetDetail({ id, onClose }: { id: string; onClose: () => void }) {
           )}
 
           <div>
-            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Lifecycle Status History</h4>
+            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-600">Lifecycle Status History</h4>
             <div className="space-y-1">
               {history?.statusHistory?.length ? history.statusHistory.map((h: any) => (
-                <div key={h.id} className="flex items-center justify-between rounded-lg bg-ink-800/60 px-3 py-2 text-sm">
-                  <span className="text-slate-300">{humanize(h.fromStatus) || 'New'} → {humanize(h.toStatus)}</span>
-                  <span className="text-slate-500">{h.reason} · {fmtDate(h.changedAt)}</span>
+                <div key={h.id} className="flex items-center justify-between rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-sm">
+                  <span className="font-medium text-gray-900">{humanize(h.fromStatus) || 'New'} → {humanize(h.toStatus)}</span>
+                  <span className="text-gray-600">{h.reason} · {fmtDate(h.changedAt)}</span>
                 </div>
-              )) : <p className="text-sm text-slate-500">No status history.</p>}
+              )) : <p className="text-sm text-gray-600">No status history.</p>}
             </div>
           </div>
 
           <div>
-            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Allocation History</h4>
+            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-600">Allocation History</h4>
             <div className="space-y-1">
               {history?.allocations?.length ? history.allocations.map((a: any) => (
-                <div key={a.id} className="flex items-center justify-between rounded-lg bg-ink-800/60 px-3 py-2 text-sm">
-                  <span className="text-slate-300">{a.employee?.name ?? a.department?.name ?? 'Unknown'}</span>
-                  <span className="flex items-center gap-2 text-slate-500">
+                <div key={a.id} className="flex items-center justify-between rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-sm">
+                  <span className="font-medium text-gray-900">{a.employee?.name ?? a.department?.name ?? 'Unknown'}</span>
+                  <span className="flex items-center gap-2 text-gray-600">
                     <StatusBadge status={a.status} />
                     {fmtDate(a.allocatedAt)}
                     {a.returnedAt ? ` → ${fmtDate(a.returnedAt)}` : ''}
                   </span>
                 </div>
-              )) : <p className="text-sm text-slate-500">No allocations.</p>}
+              )) : <p className="text-sm text-gray-600">No allocations.</p>}
             </div>
           </div>
 
           <div>
-            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Maintenance History</h4>
+            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-600">Maintenance History</h4>
             <div className="space-y-1">
               {history?.maintenance?.length ? history.maintenance.map((m: any) => (
-                <div key={m.id} className="rounded-lg bg-ink-800/60 px-3 py-2 text-sm">
+                <div key={m.id} className="rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-sm">
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-300">{m.issue}</span>
+                    <span className="font-medium text-gray-900">{m.issue}</span>
                     <StatusBadge status={m.status} />
                   </div>
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-gray-600">
                     Raised by {m.raisedBy?.name ?? '—'} · {humanize(m.priority)} · {fmtDate(m.createdAt)}
                     {m.resolvedAt ? ` · resolved ${fmtDate(m.resolvedAt)}` : ''}
                   </p>
                 </div>
-              )) : <p className="text-sm text-slate-500">No maintenance requests.</p>}
+              )) : <p className="text-sm text-gray-600">No maintenance requests.</p>}
             </div>
           </div>
         </div>
@@ -363,9 +363,9 @@ function AssetDetail({ id, onClose }: { id: string; onClose: () => void }) {
 
 function Info({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-lg bg-ink-800/60 px-3 py-2">
-      <p className="text-xs text-slate-500">{label}</p>
-      <div className="mt-0.5 text-slate-200">{children}</div>
+    <div className="rounded-lg border border-gray-300 bg-gray-100 px-3 py-2">
+      <p className="text-xs font-medium text-gray-600">{label}</p>
+      <div className="mt-0.5 font-medium text-gray-900">{children}</div>
     </div>
   );
 }

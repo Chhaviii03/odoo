@@ -106,22 +106,22 @@ export default function BookingPage() {
       <PageHeader title="Resource Booking" subtitle="Book any time range — pick exact start and end times" />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="card overflow-hidden">
-          <div className="border-b border-ink-700 px-4 py-3 text-sm font-semibold text-white">Bookable Resources</div>
+          <div className="border-b border-gray-300 px-4 py-3 text-sm font-semibold text-gray-900">Bookable Resources</div>
           {isLoading ? <Spinner /> : !assets?.length ? <EmptyState title="No bookable resources" hint="Mark an asset as bookable when registering it." /> : (
-            <div className="divide-y divide-ink-800">
+            <div className="divide-y divide-gray-200">
               {assets.map((a) => {
                 const blocked = isBookingBlocked(a);
                 return (
                   <button
                     key={a.id}
                     onClick={() => setSelectedId(a.id)}
-                    className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-ink-800/50 ${selected?.id === a.id ? 'bg-ink-800' : ''}`}
+                    className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-gray-100 ${selected?.id === a.id ? 'bg-gray-100' : ''}`}
                   >
                     <div className="min-w-0">
                       <p className="font-mono text-xs text-accent-soft">{a.assetTag}</p>
-                      <p className="text-sm text-slate-200">{a.name}</p>
+                      <p className="text-sm text-gray-800">{a.name}</p>
                       {blocked && (
-                        <p className="mt-0.5 text-xs text-orange-300">
+                        <p className="mt-0.5 text-xs text-orange-700">
                           {a.status === 'UNDER_MAINTENANCE' ? 'Cannot book — under maintenance' : 'Cannot book'}
                         </p>
                       )}
@@ -251,7 +251,7 @@ function BookingPanel({ asset }: { asset: Asset }) {
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <p className="font-mono text-xs text-accent-soft">{asset.assetTag}</p>
-            <h3 className="text-lg font-semibold text-white">{asset.name}</h3>
+            <h3 className="text-lg font-semibold text-gray-900">{asset.name}</h3>
           </div>
           <div className="flex items-center gap-3">
             <StatusBadge status={asset.status} />
@@ -268,22 +268,22 @@ function BookingPanel({ asset }: { asset: Asset }) {
 
         {blocked ? (
           <div className="rounded-lg border border-orange-500/40 bg-orange-500/10 px-4 py-8 text-center">
-            <p className="text-sm font-medium text-orange-200">
+            <p className="text-sm font-medium text-orange-800">
               {asset.status === 'UNDER_MAINTENANCE'
                 ? 'Cannot book — this resource is under maintenance'
                 : 'Cannot book — this resource is not available'}
             </p>
-            <p className="mt-1 text-xs text-orange-300/80">
+            <p className="mt-1 text-xs text-orange-700/80">
               Booking will be available again once maintenance is resolved and the asset returns to Available.
             </p>
           </div>
         ) : (
           <>
-            <p className="mb-3 text-xs text-slate-500">Scroll the timeline to explore the full day. Click the bar to set a start time, then adjust end time below.</p>
+            <p className="mb-3 text-xs text-gray-600">Scroll the timeline to explore the full day. Click the bar to set a start time, then adjust end time below.</p>
 
             <div ref={timelineScrollRef} className="timeline-scroll -mx-1 overflow-x-auto px-1 pb-2">
               <div style={{ width: TIMELINE_WIDTH_PX }}>
-                <div className="relative mb-1 flex text-[10px] text-slate-500">
+                <div className="relative mb-1 flex text-[10px] text-gray-600">
                   {HOUR_LABELS.map((h) => (
                     <span key={h} className="shrink-0 text-center" style={{ width: TIMELINE_WIDTH_PX / 24 }}>
                       {h === 24 ? '24:00' : `${pad(h)}:00`}
@@ -294,19 +294,19 @@ function BookingPanel({ asset }: { asset: Asset }) {
                 <div
                   role="presentation"
                   onClick={handleTimelineClick}
-                  className="relative h-28 cursor-crosshair overflow-hidden rounded-xl border border-ink-700 bg-ink-900/60"
+                  className="relative h-28 cursor-crosshair overflow-hidden rounded-xl border border-gray-300 bg-gray-100"
                   style={{ width: TIMELINE_WIDTH_PX }}
                 >
                   {Array.from({ length: 24 }, (_, h) => (
                     <div
                       key={h}
-                      className="pointer-events-none absolute inset-y-0 border-l border-ink-700/30"
+                      className="pointer-events-none absolute inset-y-0 border-l border-gray-300"
                       style={{ left: toTimelinePx(h * 60) }}
                     />
                   ))}
 
                   {nowMin != null && nowMin > 0 && (
-                    <div className="pointer-events-none absolute inset-y-0 left-0 bg-ink-950/70" style={{ width: toTimelinePx(nowMin) }} />
+                    <div className="pointer-events-none absolute inset-y-0 left-0 bg-gray-200/70" style={{ width: toTimelinePx(nowMin) }} />
                   )}
 
                   {dayBookings.map((b) => {
@@ -319,7 +319,7 @@ function BookingPanel({ asset }: { asset: Asset }) {
                     return (
                       <div
                         key={b.id}
-                        className="pointer-events-none absolute inset-y-2 rounded-md border border-amber-500/50 bg-amber-500/25 px-2 text-[11px] leading-4 text-amber-100"
+                        className="pointer-events-none absolute inset-y-2 rounded-md border border-amber-500/50 bg-amber-500/25 px-2 text-[11px] leading-4 text-amber-800"
                         style={{ left, width }}
                         title={`${b.bookedBy?.name ?? 'Booked'} · ${fmtTime(bs)}–${fmtTime(be)}`}
                       >
@@ -346,7 +346,7 @@ function BookingPanel({ asset }: { asset: Asset }) {
               </div>
             </div>
 
-            <div className="mt-3 flex flex-wrap gap-4 text-xs text-slate-500">
+            <div className="mt-3 flex flex-wrap gap-4 text-xs text-gray-600">
               <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border border-amber-500/50 bg-amber-500/25" /> Booked</span>
               <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border-2 border-accent bg-accent/25" /> Your selection</span>
               <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-0.5 bg-rose-400" /> Now</span>
@@ -357,7 +357,7 @@ function BookingPanel({ asset }: { asset: Asset }) {
 
       {!blocked && (
         <div className="card p-5">
-          <h4 className="mb-3 text-sm font-semibold text-white">Book a slot</h4>
+          <h4 className="mb-3 text-sm font-semibold text-gray-900">Book a slot</h4>
           <div className="flex flex-wrap items-end gap-3">
             <Field label="Start">
               <input
@@ -385,24 +385,24 @@ function BookingPanel({ asset }: { asset: Asset }) {
               Book slot
             </button>
           </div>
-          <p className="mt-2 text-xs text-slate-500">
+          <p className="mt-2 text-xs text-gray-600">
             Pick any minute through the full day — e.g. 2:15 AM to 11:45 PM ({Math.round(selectionDurationMin)} min selected).
           </p>
-          {validationError && <p className="mt-1 text-xs text-rose-300">{validationError}</p>}
+          {validationError && <p className="mt-1 text-xs text-rose-700">{validationError}</p>}
         </div>
       )}
 
       <div className="card p-5">
-        <h4 className="mb-3 text-sm font-semibold text-white">Bookings</h4>
+        <h4 className="mb-3 text-sm font-semibold text-gray-900">Bookings</h4>
         <div className="space-y-1">
-          {(bookings ?? []).length === 0 && <p className="text-sm text-slate-500">No bookings yet.</p>}
+          {(bookings ?? []).length === 0 && <p className="text-sm text-gray-600">No bookings yet.</p>}
           {bookings?.map((b) => (
-            <div key={b.id} className="flex items-center justify-between rounded-lg bg-ink-800/60 px-3 py-2 text-sm">
-              <span className="text-slate-300">{fmtDate(b.startTime)} · {fmtTime(b.startTime)}–{fmtTime(b.endTime)} · {b.bookedBy?.name}</span>
+            <div key={b.id} className="flex items-center justify-between rounded-lg bg-gray-100 px-3 py-2 text-sm">
+              <span className="text-gray-700">{fmtDate(b.startTime)} · {fmtTime(b.startTime)}–{fmtTime(b.endTime)} · {b.bookedBy?.name}</span>
               <span className="flex items-center gap-2">
                 <StatusBadge status={b.status} />
                 {['UPCOMING', 'ONGOING'].includes(b.status) && (b.bookedBy?.id === user?.id || canManageBookings) && (
-                  <button className="text-xs text-rose-300 hover:underline" onClick={() => cancel.mutate(b.id)}>Cancel</button>
+                  <button className="text-xs text-rose-700 hover:underline" onClick={() => cancel.mutate(b.id)}>Cancel</button>
                 )}
               </span>
             </div>

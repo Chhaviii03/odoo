@@ -21,12 +21,12 @@ interface DashboardData {
 }
 
 const CARDS: { key: keyof Kpis; label: string; accent: string }[] = [
-  { key: 'available', label: 'Assets Available', accent: 'text-emerald-300' },
-  { key: 'allocated', label: 'Assets Allocated', accent: 'text-blue-300' },
-  { key: 'maintenanceToday', label: 'Maintenance Today', accent: 'text-orange-300' },
-  { key: 'activeBookings', label: 'Active Bookings', accent: 'text-indigo-300' },
-  { key: 'pendingTransfers', label: 'Pending Transfers', accent: 'text-amber-300' },
-  { key: 'upcomingReturns', label: 'Upcoming Returns', accent: 'text-slate-200' },
+  { key: 'available', label: 'Assets Available', accent: 'text-emerald-700' },
+  { key: 'allocated', label: 'Assets Allocated', accent: 'text-blue-700' },
+  { key: 'maintenanceToday', label: 'Maintenance Today', accent: 'text-orange-700' },
+  { key: 'activeBookings', label: 'Active Bookings', accent: 'text-indigo-700' },
+  { key: 'pendingTransfers', label: 'Pending Transfers', accent: 'text-amber-700' },
+  { key: 'upcomingReturns', label: 'Upcoming Returns', accent: 'text-gray-800' },
 ];
 
 export default function DashboardPage() {
@@ -42,7 +42,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         {CARDS.map((c) => (
           <div key={c.key} className="card p-4">
-            <p className="text-xs text-slate-400">{c.label}</p>
+            <p className="text-xs font-medium text-gray-600">{c.label}</p>
             <p className={`mt-2 text-3xl font-semibold ${c.accent}`}>{data.kpis[c.key]}</p>
           </div>
         ))}
@@ -52,12 +52,12 @@ export default function DashboardPage() {
         <div className="lg:col-span-2">
           {data.kpis.overdue > 0 && (
             <div className="card mb-4 border-rose-500/40 bg-rose-500/10 p-4">
-              <p className="text-sm font-semibold text-rose-200">{data.kpis.overdue} overdue return{data.kpis.overdue > 1 ? 's' : ''} — flagged for follow-up</p>
+              <p className="text-sm font-semibold text-rose-800">{data.kpis.overdue} overdue return{data.kpis.overdue > 1 ? 's' : ''} — flagged for follow-up</p>
               <div className="mt-3 space-y-2">
                 {data.overdueReturns.map((o) => (
-                  <div key={o.id} className="flex items-center justify-between rounded-lg bg-ink-900/60 px-3 py-2 text-sm">
-                    <span className="text-slate-200">{o.asset.assetTag} · {o.asset.name}</span>
-                    <span className="text-rose-300">{o.employee?.name ?? 'Dept'} · due {ago(o.expectedReturnDate)}</span>
+                  <div key={o.id} className="flex items-center justify-between rounded-lg bg-gray-100 px-3 py-2 text-sm">
+                    <span className="text-gray-800">{o.asset.assetTag} · {o.asset.name}</span>
+                    <span className="text-rose-700">{o.employee?.name ?? 'Dept'} · due {ago(o.expectedReturnDate)}</span>
                   </div>
                 ))}
               </div>
@@ -65,7 +65,7 @@ export default function DashboardPage() {
           )}
 
           <div className="card p-5">
-            <h3 className="mb-3 text-sm font-semibold text-white">Quick actions</h3>
+            <h3 className="mb-3 text-sm font-semibold text-gray-900">Quick actions</h3>
             <div className="flex flex-wrap gap-2">
               <button className="btn-primary" onClick={() => navigate('/assets')}>+ Register Asset</button>
               <button className="btn-ghost" onClick={() => navigate('/booking')}>Book Resource</button>
@@ -75,15 +75,15 @@ export default function DashboardPage() {
         </div>
 
         <div className="card p-5">
-          <h3 className="mb-3 text-sm font-semibold text-white">Recent Activity</h3>
+          <h3 className="mb-3 text-sm font-semibold text-gray-900">Recent Activity</h3>
           <div className="space-y-3">
-            {data.recentActivity.length === 0 && <p className="text-sm text-slate-500">No activity yet.</p>}
+            {data.recentActivity.length === 0 && <p className="text-sm text-gray-600">No activity yet.</p>}
             {data.recentActivity.map((a) => (
               <div key={a.id} className="text-sm">
-                <p className="text-slate-200">
-                  <span className="text-accent-soft">{a.user?.name ?? 'System'}</span> · {a.action.replace(/_/g, ' ').toLowerCase()}
+                <p className="text-gray-800">
+                  <span className="font-medium text-primary">{a.user?.name ?? 'System'}</span> · {a.action.replace(/_/g, ' ').toLowerCase()}
                 </p>
-                <p className="text-xs text-slate-500">{a.entityType} · {ago(a.createdAt)}</p>
+                <p className="text-xs text-gray-600">{a.entityType} · {ago(a.createdAt)}</p>
               </div>
             ))}
           </div>

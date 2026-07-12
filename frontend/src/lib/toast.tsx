@@ -54,27 +54,27 @@ function ToastIcon({ kind }: { kind: Toast['kind'] }) {
 function ModalToast({ toast: t, onClose }: { toast: Toast; onClose: () => void }) {
   const styles =
     t.kind === 'success'
-      ? 'border-emerald-500/30 bg-ink-900'
+      ? 'border-emerald-500/30 bg-white'
       : t.kind === 'error'
-        ? 'border-rose-500/40 bg-ink-900'
-        : 'border-blue-500/30 bg-ink-900';
+        ? 'border-rose-500/40 bg-white'
+        : 'border-blue-500/30 bg-white';
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <button
         type="button"
         aria-label="Dismiss"
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="overlay absolute inset-0 backdrop-blur-sm"
         onClick={onClose}
       />
       <div
         role="alertdialog"
-        className={`toast-in relative w-full max-w-md rounded-2xl border px-6 py-5 shadow-2xl ${styles}`}
+        className={`toast-in relative w-full max-w-md rounded-2xl border px-6 py-5 shadow-lg ${styles}`}
       >
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-4 top-4 text-slate-500 transition hover:text-slate-300"
+          className="absolute right-4 top-4 text-gray-600 transition hover:text-gray-700"
           aria-label="Close"
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -85,9 +85,9 @@ function ModalToast({ toast: t, onClose }: { toast: Toast; onClose: () => void }
         <div className="flex gap-4 pr-6">
           <ToastIcon kind={t.kind} />
           <div className="min-w-0 flex-1">
-            <p className="text-base font-semibold text-white">{t.title ?? (t.kind === 'error' ? 'Something went wrong' : t.kind === 'success' ? 'Success' : 'Notice')}</p>
-            <p className="mt-1 text-sm leading-relaxed text-slate-300">{t.message}</p>
-            {t.detail && <p className="mt-3 rounded-lg border border-ink-700 bg-ink-800/80 px-3 py-2 text-sm text-slate-400">{t.detail}</p>}
+            <p className="text-base font-semibold text-gray-900">{t.title ?? (t.kind === 'error' ? 'Something went wrong' : t.kind === 'success' ? 'Success' : 'Notice')}</p>
+            <p className="mt-1 text-sm leading-relaxed text-gray-700">{t.message}</p>
+            {t.detail && <p className="mt-3 rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-600">{t.detail}</p>}
             <button type="button" onClick={onClose} className="btn-primary mt-4 w-full">
               Got it
             </button>
@@ -101,8 +101,8 @@ function ModalToast({ toast: t, onClose }: { toast: Toast; onClose: () => void }
 function InlineToast({ toast: t, onClose }: { toast: Toast; onClose: () => void }) {
   const styles =
     t.kind === 'success'
-      ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-100'
-      : 'border-blue-500/40 bg-blue-500/15 text-blue-100';
+      ? 'border-emerald-500/40 bg-white text-emerald-700'
+      : 'border-blue-500/40 bg-white text-blue-700';
 
   return (
     <div className={`flex min-w-[280px] max-w-sm items-start gap-3 rounded-xl border px-4 py-3 text-left text-sm shadow-xl ${styles}`}>

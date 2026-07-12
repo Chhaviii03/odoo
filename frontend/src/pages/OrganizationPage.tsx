@@ -61,16 +61,16 @@ function DepartmentsTab() {
 
   return (
     <div className="card overflow-hidden">
-      <div className="flex items-center justify-between border-b border-ink-700 px-4 py-3">
-        <h3 className="text-sm font-semibold text-white">Departments</h3>
+      <div className="flex items-center justify-between border-b border-gray-300 px-4 py-3">
+        <h3 className="text-sm font-semibold text-gray-900">Departments</h3>
         <button className="btn-primary" onClick={() => setOpen(true)}>+ Add Department</button>
       </div>
       <table className="w-full">
-        <thead className="border-b border-ink-700"><tr><th className="th">Department</th><th className="th">Head</th><th className="th">Parent Dept</th><th className="th">Assets</th><th className="th">Status</th></tr></thead>
-        <tbody className="divide-y divide-ink-800">
+        <thead className="border-b border-gray-300"><tr><th className="th">Department</th><th className="th">Head</th><th className="th">Parent Dept</th><th className="th">Assets</th><th className="th">Status</th></tr></thead>
+        <tbody className="divide-y divide-gray-200">
           {departments?.map((d) => (
             <tr key={d.id}>
-              <td className="td font-medium text-white">{d.name}</td>
+              <td className="td font-medium text-gray-900">{d.name}</td>
               <td className="td">{d.head?.name ?? '—'}</td>
               <td className="td">{d.parent?.name ?? '—'}</td>
               <td className="td">{d._count?.assets ?? 0}</td>
@@ -152,17 +152,17 @@ function CategoriesTab() {
 
   return (
     <div className="card overflow-hidden">
-      <div className="flex items-center justify-between border-b border-ink-700 px-4 py-3">
-        <h3 className="text-sm font-semibold text-white">Asset Categories</h3>
+      <div className="flex items-center justify-between border-b border-gray-300 px-4 py-3">
+        <h3 className="text-sm font-semibold text-gray-900">Asset Categories</h3>
         <button className="btn-primary" onClick={() => setOpen(true)}>+ Add Category</button>
       </div>
       <table className="w-full">
-        <thead className="border-b border-ink-700"><tr><th className="th">Category</th><th className="th">Custom Fields</th><th className="th">Assets</th></tr></thead>
-        <tbody className="divide-y divide-ink-800">
+        <thead className="border-b border-gray-300"><tr><th className="th">Category</th><th className="th">Custom Fields</th><th className="th">Assets</th></tr></thead>
+        <tbody className="divide-y divide-gray-200">
           {categories?.map((c) => (
             <tr key={c.id}>
-              <td className="td font-medium text-white">{c.name}</td>
-              <td className="td text-slate-400">{c.customFields ? JSON.stringify(c.customFields) : '—'}</td>
+              <td className="td font-medium text-gray-900">{c.name}</td>
+              <td className="td text-gray-600">{c.customFields ? JSON.stringify(c.customFields) : '—'}</td>
               <td className="td">{c._count?.assets ?? 0}</td>
             </tr>
           ))}
@@ -200,17 +200,17 @@ function EmployeesTab() {
 
   return (
     <div className="card overflow-hidden">
-      <div className="border-b border-ink-700 px-4 py-3">
-        <h3 className="text-sm font-semibold text-white">Employee Directory</h3>
-        <p className="text-xs text-slate-500">The only place roles are assigned — promote employees to Dept Head / Asset Manager here.</p>
+      <div className="border-b border-gray-300 px-4 py-3">
+        <h3 className="text-sm font-semibold text-gray-900">Employee Directory</h3>
+        <p className="text-xs text-gray-600">The only place roles are assigned — promote employees to Dept Head / Asset Manager here.</p>
       </div>
       <table className="w-full">
-        <thead className="border-b border-ink-700"><tr><th className="th">Name</th><th className="th">Email</th><th className="th">Department</th><th className="th">Role</th><th className="th">Status</th></tr></thead>
-        <tbody className="divide-y divide-ink-800">
+        <thead className="border-b border-gray-300"><tr><th className="th">Name</th><th className="th">Email</th><th className="th">Department</th><th className="th">Role</th><th className="th">Status</th></tr></thead>
+        <tbody className="divide-y divide-gray-200">
           {employees.map((e) => (
             <tr key={e.id}>
-              <td className="td font-medium text-white">{e.name}</td>
-              <td className="td text-slate-400">{e.email}</td>
+              <td className="td font-medium text-gray-900">{e.name}</td>
+              <td className="td text-gray-600">{e.email}</td>
               <td className="td">{e.department?.name ?? '—'}</td>
               <td className="td">
                 <select className="input max-w-[180px]" value={e.role} onChange={(ev) => setRole.mutate({ id: e.id, role: ev.target.value as Role })}>

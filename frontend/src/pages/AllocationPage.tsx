@@ -19,14 +19,14 @@ export default function AllocationPage() {
       <PageHeader title="Allocation & Transfer" subtitle="Manage who holds what, with explicit conflict rules" />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="card overflow-hidden lg:col-span-1">
-          <div className="border-b border-ink-700 px-4 py-3 text-sm font-semibold text-white">Assets</div>
+          <div className="border-b border-gray-300 px-4 py-3 text-sm font-semibold text-gray-900">Assets</div>
           {isLoading ? <Spinner /> : (
-            <div className="max-h-[70vh] divide-y divide-ink-800 overflow-y-auto">
+            <div className="max-h-[70vh] divide-y divide-gray-200 overflow-y-auto">
               {assets?.map((a) => (
-                <button key={a.id} onClick={() => setSelected(a)} className={`flex w-full items-center justify-between px-4 py-3 text-left hover:bg-ink-800/50 ${selected?.id === a.id ? 'bg-ink-800' : ''}`}>
+                <button key={a.id} onClick={() => setSelected(a)} className={`flex w-full items-center justify-between px-4 py-3 text-left hover:bg-gray-100 ${selected?.id === a.id ? 'bg-gray-100' : ''}`}>
                   <div>
                     <p className="font-mono text-xs text-accent-soft">{a.assetTag}</p>
-                    <p className="text-sm text-slate-200">{a.name}</p>
+                    <p className="text-sm text-gray-800">{a.name}</p>
                   </div>
                   <StatusBadge status={a.status} />
                 </button>
@@ -89,22 +89,22 @@ function AllocationPanel({ asset, canManage }: { asset: Asset; canManage: boolea
         <div className="flex items-center justify-between">
           <div>
             <p className="font-mono text-xs text-accent-soft">{asset.assetTag}</p>
-            <h3 className="text-lg font-semibold text-white">{asset.name}</h3>
+            <h3 className="text-lg font-semibold text-gray-900">{asset.name}</h3>
           </div>
           <StatusBadge status={asset.status} />
         </div>
 
         {activeAlloc && (
           <div className="mt-4 rounded-lg border border-blue-500/30 bg-blue-500/10 p-3 text-sm">
-            <p className="text-blue-200">Currently held by <span className="font-semibold">{activeAlloc.employee?.name ?? activeAlloc.department?.name}</span></p>
-            <p className="text-blue-300/70">Expected return: {fmtDate(activeAlloc.expectedReturnDate)}</p>
+            <p className="text-blue-800">Currently held by <span className="font-semibold">{activeAlloc.employee?.name ?? activeAlloc.department?.name}</span></p>
+            <p className="text-blue-700/70">Expected return: {fmtDate(activeAlloc.expectedReturnDate)}</p>
           </div>
         )}
 
         {conflict && (
           <div className="mt-4 rounded-lg border border-rose-500/40 bg-rose-500/10 p-4">
-            <p className="text-sm font-semibold text-rose-200">Already allocated to {conflict.currentHolder?.name}</p>
-            <p className="mt-1 text-xs text-rose-300/80">You can't double-allocate this asset. Raise a transfer request instead.</p>
+            <p className="text-sm font-semibold text-rose-800">Already allocated to {conflict.currentHolder?.name}</p>
+            <p className="mt-1 text-xs text-rose-700/80">You can't double-allocate this asset. Raise a transfer request instead.</p>
             <div className="mt-3 space-y-2">
               <input className="input" placeholder="Reason for transfer" value={transferReason} onChange={(e) => setTransferReason(e.target.value)} />
               <button className="btn-danger w-full" disabled={!employeeId || requestTransfer.isPending} onClick={() => requestTransfer.mutate()}>Raise Transfer Request</button>
@@ -144,14 +144,14 @@ function AllocationPanel({ asset, canManage }: { asset: Asset; canManage: boolea
       </div>
 
       <div className="card p-5">
-        <h4 className="mb-2 text-sm font-semibold text-white">Allocation History</h4>
+        <h4 className="mb-2 text-sm font-semibold text-gray-900">Allocation History</h4>
         <div className="space-y-1">
           {allocations?.length ? allocations.map((a) => (
-            <div key={a.id} className="flex items-center justify-between rounded-lg bg-ink-800/60 px-3 py-2 text-sm">
-              <span className="text-slate-300">{a.employee?.name ?? a.department?.name ?? '—'}</span>
-              <span className="text-slate-500"><StatusBadge status={a.status} /> · {fmtDate(a.allocatedAt)}{a.returnedAt ? ` → ${fmtDate(a.returnedAt)}` : ''}</span>
+            <div key={a.id} className="flex items-center justify-between rounded-lg bg-gray-100 px-3 py-2 text-sm">
+              <span className="text-gray-700">{a.employee?.name ?? a.department?.name ?? '—'}</span>
+              <span className="text-gray-600"><StatusBadge status={a.status} /> · {fmtDate(a.allocatedAt)}{a.returnedAt ? ` → ${fmtDate(a.returnedAt)}` : ''}</span>
             </div>
-          )) : <p className="text-sm text-slate-500">No allocation history.</p>}
+          )) : <p className="text-sm text-gray-600">No allocation history.</p>}
         </div>
       </div>
     </div>
@@ -171,17 +171,17 @@ function TransfersList({ canApprove }: { canApprove: boolean }) {
 
   return (
     <div className="card mt-6 overflow-hidden">
-      <div className="border-b border-ink-700 px-4 py-3 text-sm font-semibold text-white">Transfer Requests</div>
-      {!transfers?.length ? <p className="p-4 text-sm text-slate-500">No transfer requests.</p> : (
+      <div className="border-b border-gray-300 px-4 py-3 text-sm font-semibold text-gray-900">Transfer Requests</div>
+      {!transfers?.length ? <p className="p-4 text-sm text-gray-600">No transfer requests.</p> : (
         <table className="w-full">
-          <thead className="border-b border-ink-700"><tr><th className="th">Asset</th><th className="th">From</th><th className="th">To</th><th className="th">Reason</th><th className="th">Status</th><th className="th">Action</th></tr></thead>
-          <tbody className="divide-y divide-ink-800">
+          <thead className="border-b border-gray-300"><tr><th className="th">Asset</th><th className="th">From</th><th className="th">To</th><th className="th">Reason</th><th className="th">Status</th><th className="th">Action</th></tr></thead>
+          <tbody className="divide-y divide-gray-200">
             {transfers.map((t) => (
               <tr key={t.id}>
                 <td className="td font-mono text-accent-soft">{t.asset?.assetTag}</td>
                 <td className="td">{t.fromEmployee?.name ?? '—'}</td>
                 <td className="td">{t.toEmployee?.name ?? '—'}</td>
-                <td className="td text-slate-400">{t.reason ?? '—'}</td>
+                <td className="td text-gray-600">{t.reason ?? '—'}</td>
                 <td className="td"><StatusBadge status={t.status} /></td>
                 <td className="td">
                   {canApprove && t.status === 'REQUESTED' ? (
@@ -196,7 +196,7 @@ function TransfersList({ canApprove }: { canApprove: boolean }) {
           </tbody>
         </table>
       )}
-      {pending.length > 0 && <p className="px-4 py-2 text-xs text-amber-300">{pending.length} awaiting approval</p>}
+      {pending.length > 0 && <p className="px-4 py-2 text-xs text-amber-700">{pending.length} awaiting approval</p>}
     </div>
   );
 }

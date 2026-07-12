@@ -151,11 +151,10 @@ export function AssetFilterBar({
 
   return (
     <div className="mb-6 space-y-3">
-      {/* Toolbar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative min-w-0 flex-1">
           <svg
-            className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+            className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-600"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -165,7 +164,7 @@ export function AssetFilterBar({
             <path d="M20 20l-3.5-3.5" strokeLinecap="round" />
           </svg>
           <input
-            className="input h-11 border-ink-600/80 bg-ink-900 pl-10 pr-3 shadow-sm"
+            className="input h-11 border-gray-300 bg-white pl-10 pr-3"
             placeholder="Search by tag, serial, QR, category, status, department, or location"
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
@@ -174,7 +173,7 @@ export function AssetFilterBar({
 
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           {typeof resultCount === 'number' && (
-            <span className="inline-flex h-11 items-center rounded-lg border border-ink-700 bg-ink-900 px-3 text-xs font-medium text-slate-400">
+            <span className="inline-flex h-11 items-center rounded-lg border border-gray-300 bg-white px-3 text-xs font-medium text-gray-700">
               {isFetching ? '…' : resultCount} total
             </span>
           )}
@@ -185,8 +184,8 @@ export function AssetFilterBar({
             className={clsx(
               'inline-flex h-11 items-center gap-2 rounded-lg border px-3.5 text-sm font-medium transition-colors',
               open
-                ? 'border-accent/60 bg-accent/10 text-accent-soft'
-                : 'border-ink-600 bg-ink-900 text-slate-200 hover:border-ink-500 hover:bg-ink-800',
+                ? 'border-primary/60 bg-primary/10 text-primary'
+                : 'border-gray-300 bg-white text-gray-800 hover:border-gray-400 hover:bg-gray-100',
             )}
           >
             <svg className="h-4 w-4 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -199,7 +198,7 @@ export function AssetFilterBar({
             <button
               type="button"
               onClick={clearAll}
-              className="inline-flex h-11 items-center rounded-lg px-3 text-xs font-medium text-slate-400 hover:bg-ink-800 hover:text-slate-200"
+              className="inline-flex h-11 items-center rounded-lg px-3 text-xs font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900"
             >
               Clear
             </button>
@@ -207,20 +206,19 @@ export function AssetFilterBar({
         </div>
       </div>
 
-      {/* Active filter chips */}
       {filters.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
           {filters.map((f) => (
             <span
               key={f.id}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-ink-600 bg-ink-900 px-2.5 py-1.5 text-xs"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs"
             >
-              <span className="text-slate-500">{f.propertyLabel}</span>
-              <span className="text-slate-600">=</span>
-              <span className="font-medium text-slate-100">{f.displayValue}</span>
+              <span className="text-gray-600">{f.propertyLabel}</span>
+              <span className="text-gray-700">=</span>
+              <span className="font-medium text-gray-900">{f.displayValue}</span>
               <button
                 type="button"
-                className="ml-1 rounded p-0.5 text-slate-500 hover:bg-ink-700 hover:text-rose-300"
+                className="ml-1 rounded p-0.5 text-gray-600 hover:bg-gray-100 hover:text-rose-700"
                 onClick={() => removeFilter(f.id)}
                 aria-label={`Remove ${f.propertyLabel} filter`}
               >
@@ -236,31 +234,29 @@ export function AssetFilterBar({
               setOpen(true);
               setSelectedProperty(null);
             }}
-            className="text-xs font-medium text-accent-soft hover:underline"
+            className="text-xs font-medium text-primary hover:underline"
           >
             + Add
           </button>
         </div>
       )}
 
-      {/* Inline filter builder — no absolute overlay */}
       {open && (
-        <div className="overflow-hidden rounded-xl border border-ink-600 bg-ink-900 shadow-lg shadow-black/20">
-          <div className="flex items-center justify-between border-b border-ink-700 px-4 py-2.5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+        <div className="overflow-hidden rounded-xl border border-gray-300 bg-white shadow-soft">
+          <div className="flex items-center justify-between border-b border-gray-300 px-4 py-2.5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">
               {selectedProperty ? `Filter by ${selectedProperty.label}` : 'Choose a property'}
             </p>
-            <button type="button" onClick={closePanel} className="text-xs text-slate-500 hover:text-slate-200">
+            <button type="button" onClick={closePanel} className="text-xs text-gray-600 hover:text-gray-900">
               Close
             </button>
           </div>
 
           <div className="grid min-h-[280px] md:grid-cols-[220px_1fr]">
-            {/* Properties */}
-            <div className="border-b border-ink-700 md:border-b-0 md:border-r">
-              <div className="border-b border-ink-700 p-2">
+            <div className="border-b border-gray-300 bg-gray-100 md:border-b-0 md:border-r">
+              <div className="border-b border-gray-300 p-2">
                 <input
-                  className="input h-9 bg-ink-950/50 text-xs"
+                  className="input h-9 bg-white text-xs"
                   placeholder="Search properties…"
                   value={propertyQuery}
                   onChange={(e) => setPropertyQuery(e.target.value)}
@@ -268,9 +264,9 @@ export function AssetFilterBar({
                 />
               </div>
               <div className="max-h-64 overflow-y-auto p-1.5">
-                {optionsLoading && <p className="px-3 py-8 text-center text-xs text-slate-500">Loading…</p>}
+                {optionsLoading && <p className="px-3 py-8 text-center text-xs text-gray-600">Loading…</p>}
                 {!optionsLoading && filteredProperties.length === 0 && (
-                  <p className="px-3 py-8 text-center text-xs text-slate-500">No properties</p>
+                  <p className="px-3 py-8 text-center text-xs text-gray-600">No properties</p>
                 )}
                 {filteredProperties.map((prop) => (
                   <button
@@ -280,12 +276,12 @@ export function AssetFilterBar({
                     className={clsx(
                       'mb-0.5 flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition-colors',
                       selectedProperty?.key === prop.key
-                        ? 'bg-accent/15 text-accent-soft'
-                        : 'text-slate-300 hover:bg-ink-800',
+                        ? 'bg-primary/15 text-primary'
+                        : 'text-gray-800 hover:bg-white',
                     )}
                   >
                     <span className="text-sm font-medium">{prop.label}</span>
-                    <span className="rounded-md bg-ink-800 px-1.5 py-0.5 text-[10px] tabular-nums text-slate-500">
+                    <span className="rounded-md bg-white px-1.5 py-0.5 text-[10px] tabular-nums text-gray-600 border border-gray-300">
                       {prop.values.length}
                     </span>
                   </button>
@@ -293,24 +289,23 @@ export function AssetFilterBar({
               </div>
             </div>
 
-            {/* Values */}
-            <div className="flex flex-col bg-ink-950/30">
+            <div className="flex flex-col bg-white">
               {!selectedProperty ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-12 text-center">
-                  <p className="text-sm text-slate-400">Select a property on the left</p>
-                  <p className="max-w-xs text-xs text-slate-600">
+                  <p className="text-sm text-gray-700">Select a property on the left</p>
+                  <p className="max-w-xs text-xs text-gray-600">
                     Unique values are loaded from your assets — pick one or more to narrow the list.
                   </p>
                 </div>
               ) : (
                 <>
-                  <div className="border-b border-ink-700 px-4 py-3">
-                    <p className="text-sm font-medium text-white">{selectedProperty.label}</p>
-                    <p className="mt-0.5 text-xs text-slate-500">{selectedProperty.description}</p>
+                  <div className="border-b border-gray-300 px-4 py-3">
+                    <p className="text-sm font-medium text-gray-900">{selectedProperty.label}</p>
+                    <p className="mt-0.5 text-xs text-gray-600">{selectedProperty.description}</p>
                   </div>
-                  <div className="border-b border-ink-700 p-2">
+                  <div className="border-b border-gray-300 p-2">
                     <input
-                      className="input h-9 bg-ink-950/50 text-xs"
+                      className="input h-9 bg-white text-xs"
                       placeholder={`Search ${selectedProperty.label.toLowerCase()}…`}
                       value={valueQuery}
                       onChange={(e) => setValueQuery(e.target.value)}
@@ -319,7 +314,7 @@ export function AssetFilterBar({
                   </div>
                   <div className="max-h-52 flex-1 overflow-y-auto p-1.5">
                     {filteredValues.length === 0 ? (
-                      <p className="px-3 py-8 text-center text-xs text-slate-500">
+                      <p className="px-3 py-8 text-center text-xs text-gray-600">
                         {selectedProperty.values.length === 0
                           ? 'No values in the database yet'
                           : 'No matching values (or already applied)'}
@@ -330,10 +325,10 @@ export function AssetFilterBar({
                           key={v.value}
                           type="button"
                           onClick={() => addFilter(v)}
-                          className="mb-0.5 flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm text-slate-200 hover:bg-ink-800"
+                          className="mb-0.5 flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm text-gray-800 hover:bg-gray-100"
                         >
                           <span className="truncate">{v.label}</span>
-                          <span className="ml-3 shrink-0 text-xs font-medium text-accent-soft">Add</span>
+                          <span className="ml-3 shrink-0 text-xs font-medium text-primary">Add</span>
                         </button>
                       ))
                     )}
