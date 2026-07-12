@@ -1,8 +1,29 @@
-import type { Prisma } from '@prisma/client';
+import type { AssetStatus, Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
 import { ApiError } from '../../lib/errors.js';
 import { logActivity } from '../../shared/activityLog.js';
 import { transitionAsset } from '../../shared/assetStateMachine.js';
+
+const ASSET_STATUSES: AssetStatus[] = [
+  'AVAILABLE',
+  'ALLOCATED',
+  'RESERVED',
+  'UNDER_MAINTENANCE',
+  'LOST',
+  'RETIRED',
+  'DISPOSED',
+];
+
+/** Match user text like "available", "under maintenance", "UNDER_MAINTENANCE". */
+function matchAssetStatuses(query: string): AssetStatus[] {
+  const normalized = query.trim().toLowerCase().replace(/[\s-]+/g, '_');
+  if (!normalized) return [];
+  return ASSET_STATUSES.filter((status) => {
+    const asEnum = status.toLowerCase();
+    const asWords = status.toLowerCase().replace(/_/g, ' ');
+    return asEnum.includes(normalized) || asWords.includes(query.trim().toLowerCase()) || normalized.includes(asEnum);
+  });
+}
 
 // Auto-generate the next asset tag: AF-0001, AF-0002, ...
 async function nextAssetTag(tx: Prisma.TransactionClient): Promise<string> {
@@ -16,24 +37,178 @@ async function nextAssetTag(tx: Prisma.TransactionClient): Promise<string> {
   return `AF-${String(next).padStart(4, '0')}`;
 }
 
+function splitCsv(value?: string | null): string[] {
+  if (!value) return [];
+  return String(value)
+    .split(',')
+    .map((v) => v.trim())
+    .filter(Boolean);
+}
+
 export const assetsService = {
+  async filterOptions() {
+    const [tags, serials, qrs, locations, statuses, categories, departments] = await Promise.all([
+      prisma.asset.findMany({ select: { assetTag: true }, distinct: ['assetTag'], orderBy: { assetTag: 'asc' } }),
+      prisma.asset.findMany({
+        where: { serialNumber: { not: null } },
+        select: { serialNumber: true },
+        distinct: ['serialNumber'],
+        orderBy: { serialNumber: 'asc' },
+      }),
+      prisma.asset.findMany({
+        where: { qrCode: { not: null } },
+        select: { qrCode: true },
+        distinct: ['qrCode'],
+        orderBy: { qrCode: 'asc' },
+      }),
+      prisma.asset.findMany({
+        where: { location: { not: null } },
+        select: { location: true },
+        distinct: ['location'],
+        orderBy: { location: 'asc' },
+      }),
+      prisma.asset.findMany({ select: { status: true }, distinct: ['status'], orderBy: { status: 'asc' } }),
+      prisma.assetCategory.findMany({
+        orderBy: { name: 'asc' },
+        select: { id: true, name: true, _count: { select: { assets: true } } },
+      }),
+      prisma.department.findMany({
+        orderBy: { name: 'asc' },
+        select: { id: true, name: true, _count: { select: { assets: true } } },
+      }),
+    ]);
+
+    return {
+      properties: [
+        {
+          key: 'tag',
+          label: 'Asset Tag',
+          description: 'Unique asset identifier (e.g. AF-0001).',
+          values: tags.map((t) => ({ value: t.assetTag, label: t.assetTag })),
+        },
+        {
+          key: 'serial',
+          label: 'Serial Number',
+          description: 'Manufacturer or internal serial number.',
+          values: serials
+            .filter((s) => s.serialNumber)
+            .map((s) => ({ value: s.serialNumber!, label: s.serialNumber! })),
+        },
+        {
+          key: 'qr',
+          label: 'QR Code',
+          description: 'QR / barcode value linked to the asset (defaults to asset tag when unset).',
+          values: (() => {
+            const fromQr = qrs.filter((q) => q.qrCode).map((q) => ({ value: q.qrCode!, label: q.qrCode! }));
+            if (fromQr.length) return fromQr;
+            // Fallback: seeded assets often use the asset tag as the scannable code.
+            return tags.map((t) => ({ value: t.assetTag, label: t.assetTag }));
+          })(),
+        },
+        {
+          key: 'location',
+          label: 'Location',
+          description: 'Physical location of the asset.',
+          values: locations
+            .filter((l) => l.location)
+            .map((l) => ({ value: l.location!, label: l.location! })),
+        },
+        {
+          key: 'status',
+          label: 'Status',
+          description: 'Lifecycle status (Available, Allocated, Under Maintenance, …).',
+          values: (statuses.length
+            ? statuses.map((s) => s.status)
+            : ASSET_STATUSES
+          ).map((status) => ({
+            value: status,
+            label: status
+              .toLowerCase()
+              .split('_')
+              .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+              .join(' '),
+          })),
+        },
+        {
+          key: 'categoryId',
+          label: 'Category',
+          description: 'Asset category from Organization Setup.',
+          values: categories
+            .filter((c) => c._count.assets > 0)
+            .map((c) => ({ value: c.id, label: c.name })),
+        },
+        {
+          key: 'departmentId',
+          label: 'Department',
+          description: 'Owning department.',
+          values: departments
+            .filter((d) => d._count.assets > 0)
+            .map((d) => ({ value: d.id, label: d.name })),
+        },
+      ],
+    };
+  },
+
   async list(filter: any) {
     const where: Prisma.AssetWhereInput = {};
-    if (filter.tag) where.assetTag = { contains: filter.tag, mode: 'insensitive' };
-    if (filter.serial) where.serialNumber = { contains: filter.serial, mode: 'insensitive' };
-    if (filter.qr) where.qrCode = filter.qr;
-    if (filter.categoryId) where.categoryId = filter.categoryId;
-    if (filter.status) where.status = filter.status;
-    if (filter.departmentId) where.departmentId = filter.departmentId;
-    if (filter.location) where.location = { contains: filter.location, mode: 'insensitive' };
-    if (filter.isBookable !== undefined) where.isBookable = filter.isBookable;
-    if (filter.search) {
-      where.OR = [
-        { name: { contains: filter.search, mode: 'insensitive' } },
-        { assetTag: { contains: filter.search, mode: 'insensitive' } },
-        { serialNumber: { contains: filter.search, mode: 'insensitive' } },
-      ];
+    const and: Prisma.AssetWhereInput[] = [];
+
+    const tags = splitCsv(filter.tag);
+    if (tags.length === 1) where.assetTag = { equals: tags[0], mode: 'insensitive' };
+    else if (tags.length > 1) and.push({ OR: tags.map((t) => ({ assetTag: { equals: t, mode: 'insensitive' } })) });
+
+    const serials = splitCsv(filter.serial);
+    if (serials.length === 1) where.serialNumber = { equals: serials[0], mode: 'insensitive' };
+    else if (serials.length > 1) and.push({ OR: serials.map((s) => ({ serialNumber: { equals: s, mode: 'insensitive' } })) });
+
+    const qrs = splitCsv(filter.qr);
+    if (qrs.length) {
+      and.push({
+        OR: qrs.flatMap((q) => [
+          { qrCode: { equals: q, mode: 'insensitive' } },
+          { assetTag: { equals: q, mode: 'insensitive' } },
+        ]),
+      });
     }
+
+    const locations = splitCsv(filter.location);
+    if (locations.length === 1) where.location = { equals: locations[0], mode: 'insensitive' };
+    else if (locations.length > 1) and.push({ OR: locations.map((l) => ({ location: { equals: l, mode: 'insensitive' } })) });
+
+    const statuses = splitCsv(filter.status).filter((s) =>
+      ASSET_STATUSES.includes(s as AssetStatus),
+    ) as AssetStatus[];
+    if (statuses.length === 1) where.status = statuses[0];
+    else if (statuses.length > 1) where.status = { in: statuses };
+
+    const categoryIds = splitCsv(filter.categoryId);
+    if (categoryIds.length === 1) where.categoryId = categoryIds[0];
+    else if (categoryIds.length > 1) where.categoryId = { in: categoryIds };
+
+    const departmentIds = splitCsv(filter.departmentId);
+    if (departmentIds.length === 1) where.departmentId = departmentIds[0];
+    else if (departmentIds.length > 1) where.departmentId = { in: departmentIds };
+
+    if (filter.isBookable !== undefined) where.isBookable = filter.isBookable;
+
+    if (filter.search) {
+      const q = String(filter.search).trim();
+      const statusMatches = matchAssetStatuses(q);
+      and.push({
+        OR: [
+          { name: { contains: q, mode: 'insensitive' } },
+          { assetTag: { contains: q, mode: 'insensitive' } },
+          { serialNumber: { contains: q, mode: 'insensitive' } },
+          { qrCode: { contains: q, mode: 'insensitive' } },
+          { location: { contains: q, mode: 'insensitive' } },
+          { category: { name: { contains: q, mode: 'insensitive' } } },
+          { department: { name: { contains: q, mode: 'insensitive' } } },
+          ...(statusMatches.length ? [{ status: { in: statusMatches } }] : []),
+        ],
+      });
+    }
+
+    if (and.length) where.AND = and;
 
     return prisma.asset.findMany({
       where,
@@ -93,6 +268,7 @@ export const assetsService = {
         data: {
           ...data,
           assetTag,
+          qrCode: data.qrCode || assetTag,
           documentUrls: data.documentUrls ?? [],
           acquisitionCost: data.acquisitionCost ?? undefined,
         },

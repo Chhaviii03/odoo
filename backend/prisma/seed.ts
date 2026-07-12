@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 
@@ -57,22 +58,22 @@ async function main() {
   const tag = () => `AF-${String(++tagCounter).padStart(4, '0')}`;
 
   const laptop = await prisma.asset.create({
-    data: { assetTag: tag(), name: 'Dell XPS 15 Laptop', categoryId: electronics.id, departmentId: engineering.id, serialNumber: 'SN-XPS-001', condition: 'Excellent', location: 'Bangalore HQ', acquisitionCost: 1800, isBookable: false, status: 'AVAILABLE' },
+    data: { assetTag: tag(), name: 'Dell XPS 15 Laptop', categoryId: electronics.id, departmentId: engineering.id, serialNumber: 'SN-XPS-001', qrCode: 'AF-0001', condition: 'Excellent', location: 'Bangalore HQ', acquisitionCost: 1800, isBookable: false, status: 'AVAILABLE' },
   });
   const projector = await prisma.asset.create({
-    data: { assetTag: tag(), name: 'Epson Projector', categoryId: electronics.id, departmentId: facilities.id, serialNumber: 'SN-EPS-114', condition: 'Good', location: 'Floor 3', acquisitionCost: 650, isBookable: false, status: 'AVAILABLE' },
+    data: { assetTag: tag(), name: 'Epson Projector', categoryId: electronics.id, departmentId: facilities.id, serialNumber: 'SN-EPS-114', qrCode: 'AF-0002', condition: 'Good', location: 'Floor 3', acquisitionCost: 650, isBookable: false, status: 'AVAILABLE' },
   });
   const chair = await prisma.asset.create({
-    data: { assetTag: tag(), name: 'Ergonomic Office Chair', categoryId: furniture.id, departmentId: engineering.id, condition: 'Good', location: 'Floor 2', acquisitionCost: 300, isBookable: false, status: 'AVAILABLE' },
+    data: { assetTag: tag(), name: 'Ergonomic Office Chair', categoryId: furniture.id, departmentId: engineering.id, qrCode: 'AF-0003', condition: 'Good', location: 'Floor 2', acquisitionCost: 300, isBookable: false, status: 'AVAILABLE' },
   });
   const van = await prisma.asset.create({
-    data: { assetTag: tag(), name: 'Delivery Van', categoryId: vehicles.id, departmentId: operations.id, serialNumber: 'VIN-778', condition: 'Fair', location: 'Warehouse', acquisitionCost: 24000, isBookable: true, status: 'AVAILABLE' },
+    data: { assetTag: tag(), name: 'Delivery Van', categoryId: vehicles.id, departmentId: operations.id, serialNumber: 'VIN-778', qrCode: 'AF-0004', condition: 'Fair', location: 'Warehouse', acquisitionCost: 24000, isBookable: true, status: 'AVAILABLE' },
   });
   const roomB2 = await prisma.asset.create({
-    data: { assetTag: tag(), name: 'Conference Room B2', categoryId: spaces.id, departmentId: facilities.id, condition: 'Excellent', location: 'Floor 1', isBookable: true, status: 'AVAILABLE' },
+    data: { assetTag: tag(), name: 'Conference Room B2', categoryId: spaces.id, departmentId: facilities.id, qrCode: 'AF-0005', condition: 'Excellent', location: 'Floor 1', isBookable: true, status: 'AVAILABLE' },
   });
   const monitor = await prisma.asset.create({
-    data: { assetTag: tag(), name: 'LG 27" Monitor', categoryId: electronics.id, departmentId: engineering.id, serialNumber: 'SN-LG-27', condition: 'Poor', location: 'Floor 2', acquisitionCost: 250, isBookable: false, status: 'AVAILABLE' },
+    data: { assetTag: tag(), name: 'LG 27" Monitor', categoryId: electronics.id, departmentId: engineering.id, serialNumber: 'SN-LG-27', qrCode: 'AF-0006', condition: 'Poor', location: 'Floor 2', acquisitionCost: 250, isBookable: false, status: 'AVAILABLE' },
   });
 
   for (const a of [laptop, projector, chair, van, roomB2, monitor]) {
