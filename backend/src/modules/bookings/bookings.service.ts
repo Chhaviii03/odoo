@@ -3,6 +3,17 @@ import { ApiError } from '../../lib/errors.js';
 import { findBookingConflict } from '../../shared/overlapCheck.js';
 import { logActivity } from '../../shared/activityLog.js';
 import { notify } from '../../shared/notifications.js';
+import type { Role } from '@prisma/client';
+
+type BookingActor = { id: string; role: Role };
+
+function assertCanModifyBooking(booking: { bookedById: string }, actor: BookingActor, action: 'cancel' | 'reschedule') {
+  const isOwner = booking.bookedById === actor.id;
+  const isManager = actor.role === 'ADMIN' || actor.role === 'ASSET_MANAGER';
+  if (!isOwner && !isManager) {
+    throw ApiError.forbidden(action === 'cancel' ? 'You can only cancel your own bookings' : 'You can only reschedule your own bookings');
+  }
+}
 
 export const bookingsService = {
   listForAsset(assetId: string) {
@@ -27,6 +38,12 @@ export const bookingsService = {
       const asset = await tx.asset.findUnique({ where: { id: input.assetId } });
       if (!asset) throw ApiError.notFound('Asset not found');
       if (!asset.isBookable) throw ApiError.badRequest('Asset is not bookable');
+      if (asset.status === 'UNDER_MAINTENANCE') {
+        throw ApiError.badRequest('Cannot book — this resource is under maintenance');
+      }
+      if (['LOST', 'RETIRED', 'DISPOSED'].includes(asset.status)) {
+        throw ApiError.badRequest('Cannot book — this resource is not available');
+      }
       if (input.startTime.getTime() < Date.now()) {
         throw ApiError.badRequest('Cannot book a past time slot');
       }
@@ -63,21 +80,27 @@ export const bookingsService = {
     });
   },
 
-  async cancel(id: string, actorId: string) {
+  async cancel(id: string, actor: BookingActor) {
     const booking = await prisma.booking.findUnique({ where: { id } });
     if (!booking) throw ApiError.notFound('Booking not found');
+    assertCanModifyBooking(booking, actor, 'cancel');
     if (['COMPLETED', 'CANCELLED'].includes(booking.status)) throw ApiError.badRequest('Booking cannot be cancelled');
     const updated = await prisma.booking.update({ where: { id }, data: { status: 'CANCELLED' } });
-    await logActivity({ userId: actorId, action: 'BOOKING_CANCEL', entityType: 'Booking', entityId: id });
+    await logActivity({ userId: actor.id, action: 'BOOKING_CANCEL', entityType: 'Booking', entityId: id });
     await notify({ userId: booking.bookedById, type: 'BOOKING_CANCELLED', message: 'Your booking was cancelled.', relatedEntityType: 'Booking', relatedEntityId: id });
     return updated;
   },
 
-  async reschedule(id: string, input: any, actorId: string) {
+  async reschedule(id: string, input: any, actor: BookingActor) {
     return prisma.$transaction(async (tx) => {
       const booking = await tx.booking.findUnique({ where: { id } });
       if (!booking) throw ApiError.notFound('Booking not found');
+      assertCanModifyBooking(booking, actor, 'reschedule');
       if (['COMPLETED', 'CANCELLED'].includes(booking.status)) throw ApiError.badRequest('Booking cannot be rescheduled');
+      const asset = await tx.asset.findUnique({ where: { id: booking.assetId } });
+      if (asset?.status === 'UNDER_MAINTENANCE') {
+        throw ApiError.badRequest('Cannot reschedule — this resource is under maintenance');
+      }
       if (input.startTime.getTime() < Date.now()) {
         throw ApiError.badRequest('Cannot reschedule to a past time slot');
       }
@@ -94,7 +117,7 @@ export const bookingsService = {
         where: { id },
         data: { startTime: input.startTime, endTime: input.endTime, status: 'UPCOMING' },
       });
-      await logActivity({ userId: actorId, action: 'BOOKING_RESCHEDULE', entityType: 'Booking', entityId: id });
+      await logActivity({ userId: actor.id, action: 'BOOKING_RESCHEDULE', entityType: 'Booking', entityId: id });
       return updated;
     });
   },
