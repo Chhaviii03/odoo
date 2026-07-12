@@ -1,0 +1,47 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: assetflow-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: assetflow
+      POSTGRES_PASSWORD: assetflow
+      POSTGRES_DB: assetflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - assetflow_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U assetflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: assetflow-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://assetflow:assetflow@postgres:5432/assetflow?schema=public
+      PORT: 4000
+      JWT_ACCESS_SECRET: docker-access-secret-change-me
+      JWT_REFRESH_SECRET: docker-refresh-secret-change-me
+      CORS_ORIGIN: http://localhost:5173
+    ports:
+      - "4000:4000"
+    command: sh -c "npx prisma migrate deploy && npm run seed && node dist/index.js"
+
+  frontend:
+    build: ./frontend
+    container_name: assetflow-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+volumes:
+  assetflow_pgdata:
