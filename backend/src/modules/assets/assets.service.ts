@@ -65,7 +65,9 @@ async function departmentIdsForViewer(viewer: AssetViewer): Promise<string[]> {
 /**
  * Role-scoped visibility for Screen 4 (Asset Registration & Directory).
  * - Admin / Asset Manager: full catalog
- * - Department Head: assets owned by / actively allocated to their department(s)
+ * - Department Head: assets owned by their department(s), or actively allocated
+ *   to their department as an entity (not every asset held by a team member —
+ *   that would leak other departments' assets into this directory)
  * - Employee: assets currently or previously allocated to them
  * When `includeBookables` is true (Resource Booking), shared resources are also visible.
  */
@@ -84,7 +86,6 @@ async function visibilityWhere(
           OR: [
             { departmentId: { in: deptIds } },
             { allocations: { some: { departmentId: { in: deptIds }, status: { in: ['ACTIVE', 'OVERDUE'] } } } },
-            { allocations: { some: { employee: { departmentId: { in: deptIds } }, status: { in: ['ACTIVE', 'OVERDUE'] } } } },
           ],
         }
       : { id: { in: [] } };

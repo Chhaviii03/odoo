@@ -30,7 +30,7 @@ export default function AssetsPage() {
   const subtitle = canManage
     ? 'Register, search, and track assets across their lifecycle'
     : can(['DEPARTMENT_HEAD'])
-      ? 'Assets owned by or allocated to your department'
+      ? 'Assets owned by your department (or allocated to it)'
       : 'Assets allocated to you (current and past)';
 
   const emptyTitle = hasFilters
@@ -46,7 +46,7 @@ export default function AssetsPage() {
     : canManage
       ? 'Register a new asset to get started.'
       : can(['DEPARTMENT_HEAD'])
-        ? 'Assets appear here when they belong to your department or are allocated to your team.'
+        ? 'Assets appear here when they belong to your department, or are allocated to your department.'
         : 'Assets appear here after an Asset Manager allocates them to you. Book shared resources from Bookings.';
 
   return (
