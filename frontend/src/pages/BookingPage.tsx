@@ -39,14 +39,18 @@ export default function BookingPage() {
 
 function BookingPanel({ asset }: { asset: Asset }) {
   const qc = useQueryClient();
-  const today = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
+  const nextHour = `${String(Math.min(19, Math.max(8, now.getHours() + 1))).padStart(2, '0')}:00`;
   const [date, setDate] = useState(today);
-  const [start, setStart] = useState('09:00');
-  const [end, setEnd] = useState('10:00');
+  const [start, setStart] = useState(nextHour);
+  const [end, setEnd] = useState(`${String(Math.min(20, Number(nextHour.slice(0, 2)) + 1)).padStart(2, '0')}:00`);
 
   const { data: bookings } = useQuery({ queryKey: ['bookings', asset.id], queryFn: () => api<any[]>(`/assets/${asset.id}/bookings`) });
 
   const dayBookings = (bookings ?? []).filter((b) => new Date(b.startTime).toISOString().slice(0, 10) === date && b.status !== 'CANCELLED');
+  const slotStart = new Date(`${date}T${start}:00`);
+  const isPastSlot = slotStart.getTime() < Date.now();
 
   const create = useMutation({
     mutationFn: () => api('/bookings', { method: 'POST', body: { assetId: asset.id, startTime: `${date}T${start}:00`, endTime: `${date}T${end}:00` } }),
@@ -67,22 +71,32 @@ function BookingPanel({ asset }: { asset: Asset }) {
     });
   }
 
+  function isPastHour(hour: number) {
+    return new Date(`${date}T${String(hour).padStart(2, '0')}:00:00`).getTime() < Date.now();
+  }
+
   return (
     <div className="space-y-4">
       <div className="card p-5">
         <div className="mb-4 flex items-center justify-between">
           <div><p className="font-mono text-xs text-accent-soft">{asset.assetTag}</p><h3 className="text-lg font-semibold text-white">{asset.name}</h3></div>
-          <input className="input max-w-[180px]" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <input className="input max-w-[180px]" type="date" min={today} value={date} onChange={(e) => setDate(e.target.value < today ? today : e.target.value)} />
         </div>
 
         <div className="grid gap-1">
           {HOURS.map((h) => {
             const b = slotBooking(h);
+            const past = isPastHour(h);
+            const style = b
+              ? 'border-amber-500/40 bg-amber-500/15 text-amber-200'
+              : past
+                ? 'border-ink-800 bg-ink-900/50 text-slate-600'
+                : 'border-ink-700 bg-ink-800/40 text-slate-500';
             return (
               <div key={h} className="flex items-center gap-3">
                 <span className="w-14 shrink-0 text-right text-xs text-slate-500">{h}:00</span>
-                <div className={`h-9 flex-1 rounded-md border px-3 text-xs leading-9 ${b ? 'border-amber-500/40 bg-amber-500/15 text-amber-200' : 'border-ink-700 bg-ink-800/40 text-slate-500'}`}>
-                  {b ? `Booked · ${b.bookedBy?.name ?? ''} (${fmtTime(b.startTime)}–${fmtTime(b.endTime)})` : 'Available'}
+                <div className={`h-9 flex-1 rounded-md border px-3 text-xs leading-9 ${style}`}>
+                  {b ? `Booked · ${b.bookedBy?.name ?? ''} (${fmtTime(b.startTime)}–${fmtTime(b.endTime)})` : past ? 'Past' : 'Available'}
                 </div>
               </div>
             );
@@ -95,9 +109,10 @@ function BookingPanel({ asset }: { asset: Asset }) {
         <div className="flex flex-wrap items-end gap-3">
           <Field label="Start"><input className="input max-w-[120px]" type="time" value={start} onChange={(e) => setStart(e.target.value)} /></Field>
           <Field label="End"><input className="input max-w-[120px]" type="time" value={end} onChange={(e) => setEnd(e.target.value)} /></Field>
-          <button className="btn-primary" disabled={create.isPending} onClick={() => create.mutate()}>Book slot</button>
+          <button className="btn-primary" disabled={create.isPending || isPastSlot} onClick={() => create.mutate()}>Book slot</button>
         </div>
-        <p className="mt-2 text-xs text-slate-500">Overlapping requests are rejected. A slot starting exactly when another ends is allowed.</p>
+        <p className="mt-2 text-xs text-slate-500">Past slots can’t be booked. Overlapping requests are rejected. A slot starting exactly when another ends is allowed.</p>
+        {isPastSlot && <p className="mt-1 text-xs text-rose-300">Selected start time is in the past — pick a future slot.</p>}
       </div>
 
       <div className="card p-5">
