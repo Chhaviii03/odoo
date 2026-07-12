@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { api, setTokens, getAccessToken } from './api';
+import { disconnectSocket } from './socket';
 import type { Role, User } from './types';
 
 interface AuthState {
@@ -55,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await handleAuth(result);
     },
     logout() {
+      disconnectSocket();
       setTokens(null, null);
       setUser(null);
     },

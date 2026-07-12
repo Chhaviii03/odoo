@@ -36,6 +36,7 @@ export const assetFilterSchema = z.object({
   departmentId: optionalString,
   location: optionalString,
   isBookable: z.preprocess(emptyToUndefined, z.coerce.boolean().optional()),
+  context: z.enum(['allocation', 'directory']).optional(),
 });
 
 export const retireSchema = z.object({

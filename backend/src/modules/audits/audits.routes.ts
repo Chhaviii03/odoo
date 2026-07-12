@@ -20,4 +20,5 @@ auditCyclesRouter.get('/:id/discrepancies', asyncHandler(async (req, res) => res
 auditCyclesRouter.patch('/:id/close', manager, asyncHandler(async (req, res) => res.json(await auditsService.closeCycle(req.params.id, req.user!.sub))));
 
 auditItemsRouter.use(requireAuth);
-auditItemsRouter.patch('/:id/verify', validate(verifyItemSchema), asyncHandler(async (req, res) => res.json(await auditsService.verifyItem(req.params.id, req.body, req.user!.sub))));
+// Managers or auditors assigned to the cycle may verify (role checked in service).
+auditItemsRouter.patch('/:id/verify', validate(verifyItemSchema), asyncHandler(async (req, res) => res.json(await auditsService.verifyItem(req.params.id, req.body, req.user!.sub, req.user!.role))));

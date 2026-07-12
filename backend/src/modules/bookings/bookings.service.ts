@@ -5,7 +5,26 @@ import { logActivity } from '../../shared/activityLog.js';
 import { notify } from '../../shared/notifications.js';
 import type { Role } from '@prisma/client';
 
-type BookingActor = { id: string; role: Role };
+type BookingActor = { id: string; role: Role; departmentId: string | null };
+
+async function departmentIdsForActor(actorId: string, departmentId: string | null): Promise<string[]> {
+  const headed = await prisma.department.findMany({ where: { headId: actorId }, select: { id: true } });
+  const ids = new Set(headed.map((d) => d.id));
+  if (departmentId) ids.add(departmentId);
+  return [...ids];
+}
+
+async function assertDepartmentBooking(actor: BookingActor, departmentId: string | null | undefined) {
+  if (!departmentId) return;
+  if (actor.role === 'ADMIN' || actor.role === 'ASSET_MANAGER') return;
+  if (actor.role !== 'DEPARTMENT_HEAD') {
+    throw ApiError.forbidden('Only department heads can book on behalf of a department');
+  }
+  const deptIds = await departmentIdsForActor(actor.id, actor.departmentId);
+  if (!deptIds.includes(departmentId)) {
+    throw ApiError.forbidden('You can only book on behalf of your department');
+  }
+}
 
 function assertCanModifyBooking(booking: { bookedById: string }, actor: BookingActor, action: 'cancel' | 'reschedule') {
   const isOwner = booking.bookedById === actor.id;
@@ -33,11 +52,19 @@ export const bookingsService = {
   },
 
   // 4.3 Booking overlap validation
-  async create(input: any, actorId: string) {
+  async create(input: any, actor: BookingActor) {
+    await assertDepartmentBooking(actor, input.departmentId);
+
     return prisma.$transaction(async (tx) => {
       const asset = await tx.asset.findUnique({ where: { id: input.assetId } });
       if (!asset) throw ApiError.notFound('Asset not found');
       if (!asset.isBookable) throw ApiError.badRequest('Asset is not bookable');
+      if (asset.status === 'UNDER_MAINTENANCE') {
+        throw ApiError.badRequest('Cannot book — this resource is under maintenance');
+      }
+      if (['LOST', 'RETIRED', 'DISPOSED'].includes(asset.status)) {
+        throw ApiError.badRequest('Cannot book — this resource is not available');
+      }
       if (input.startTime.getTime() < Date.now()) {
         throw ApiError.badRequest('Cannot book a past time slot');
       }
@@ -61,15 +88,15 @@ export const bookingsService = {
       const booking = await tx.booking.create({
         data: {
           assetId: input.assetId,
-          bookedById: actorId,
+          bookedById: actor.id,
           departmentId: input.departmentId ?? null,
           startTime: input.startTime,
           endTime: input.endTime,
           status: 'UPCOMING',
         },
       });
-      await logActivity({ userId: actorId, action: 'BOOKING_CREATE', entityType: 'Booking', entityId: booking.id, metadata: { assetId: input.assetId } });
-      await notify({ userId: actorId, type: 'BOOKING_CONFIRMED', message: `Booking confirmed for ${asset.assetTag} (${asset.name}).`, relatedEntityType: 'Booking', relatedEntityId: booking.id });
+      await logActivity({ userId: actor.id, action: 'BOOKING_CREATE', entityType: 'Booking', entityId: booking.id, metadata: { assetId: input.assetId } });
+      await notify({ userId: actor.id, type: 'BOOKING_CONFIRMED', message: `Booking confirmed for ${asset.assetTag} (${asset.name}).`, relatedEntityType: 'Booking', relatedEntityId: booking.id });
       return booking;
     });
   },
@@ -91,6 +118,10 @@ export const bookingsService = {
       if (!booking) throw ApiError.notFound('Booking not found');
       assertCanModifyBooking(booking, actor, 'reschedule');
       if (['COMPLETED', 'CANCELLED'].includes(booking.status)) throw ApiError.badRequest('Booking cannot be rescheduled');
+      const asset = await tx.asset.findUnique({ where: { id: booking.assetId } });
+      if (asset?.status === 'UNDER_MAINTENANCE') {
+        throw ApiError.badRequest('Cannot reschedule — this resource is under maintenance');
+      }
       if (input.startTime.getTime() < Date.now()) {
         throw ApiError.badRequest('Cannot reschedule to a past time slot');
       }

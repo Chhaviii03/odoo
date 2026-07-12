@@ -17,6 +17,6 @@ export const returnAllocationSchema = z.object({
 
 export const createTransferSchema = z.object({
   assetId: z.string().uuid(),
-  toEmployeeId: z.string().uuid(),
+  toEmployeeId: z.string().uuid().optional(),
   reason: z.string().optional(),
 });

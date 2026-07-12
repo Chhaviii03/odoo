@@ -15,6 +15,14 @@ export function useEmployees(enabled = true) {
   return useQuery({ queryKey: ['employees'], queryFn: () => api<User[]>('/employees'), enabled });
 }
 
+export function useAllocationEmployees(enabled = true) {
+  return useQuery({
+    queryKey: ['employees', 'for-allocation'],
+    queryFn: () => api<User[]>('/employees/for-allocation'),
+    enabled,
+  });
+}
+
 export function useAssets(params: Record<string, string | undefined> = {}) {
   const { user } = useAuth();
   const clean = Object.fromEntries(

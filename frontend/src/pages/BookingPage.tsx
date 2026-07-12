@@ -6,10 +6,9 @@ import { toast } from '../lib/toast';
 import { fmtTime, fmtDate } from '../lib/format';
 import { localDateKey, minutesOfLocalDay, parseLocalDateTime, todayLocal, toApiDateTime } from '../lib/datetime';
 import { useAuth } from '../lib/auth';
-import { useAssets } from '../features/queries';
+import { useAssets, useDepartments } from '../features/queries';
 import type { Asset } from '../lib/types';
 
-const DAY_START_MIN = 0;
 const DAY_END_MIN = 24 * 60; // full day, 00:00 → 24:00
 const END_OF_DAY_MIN = DAY_END_MIN - 1; // 23:59 — latest selectable end
 const DAY_SPAN_MIN = DAY_END_MIN;
@@ -68,7 +67,6 @@ function rangeOverlaps(bookings: any[], start: Date, end: Date) {
   });
 }
 
-
 function toTimelinePx(minutes: number) {
   return (Math.max(0, Math.min(DAY_END_MIN, minutes)) / DAY_SPAN_MIN) * TIMELINE_WIDTH_PX;
 }
@@ -94,9 +92,14 @@ function validateSelection(date: string, today: string, now: Date, start: string
   return null;
 }
 
+function isBookingBlocked(asset: Asset) {
+  return asset.status === 'UNDER_MAINTENANCE' || ['LOST', 'RETIRED', 'DISPOSED'].includes(asset.status);
+}
+
 export default function BookingPage() {
-  const [selected, setSelected] = useState<Asset | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const { data: assets, isLoading } = useAssets({ isBookable: 'true' });
+  const selected = assets?.find((a) => a.id === selectedId) ?? null;
 
   return (
     <div>
@@ -106,11 +109,27 @@ export default function BookingPage() {
           <div className="border-b border-ink-700 px-4 py-3 text-sm font-semibold text-white">Bookable Resources</div>
           {isLoading ? <Spinner /> : !assets?.length ? <EmptyState title="No bookable resources" hint="Mark an asset as bookable when registering it." /> : (
             <div className="divide-y divide-ink-800">
-              {assets.map((a) => (
-                <button key={a.id} onClick={() => setSelected(a)} className={`flex w-full items-center justify-between px-4 py-3 text-left hover:bg-ink-800/50 ${selected?.id === a.id ? 'bg-ink-800' : ''}`}>
-                  <div><p className="font-mono text-xs text-accent-soft">{a.assetTag}</p><p className="text-sm text-slate-200">{a.name}</p></div>
-                </button>
-              ))}
+              {assets.map((a) => {
+                const blocked = isBookingBlocked(a);
+                return (
+                  <button
+                    key={a.id}
+                    onClick={() => setSelectedId(a.id)}
+                    className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-ink-800/50 ${selected?.id === a.id ? 'bg-ink-800' : ''}`}
+                  >
+                    <div className="min-w-0">
+                      <p className="font-mono text-xs text-accent-soft">{a.assetTag}</p>
+                      <p className="text-sm text-slate-200">{a.name}</p>
+                      {blocked && (
+                        <p className="mt-0.5 text-xs text-orange-300">
+                          {a.status === 'UNDER_MAINTENANCE' ? 'Cannot book — under maintenance' : 'Cannot book'}
+                        </p>
+                      )}
+                    </div>
+                    {blocked && <StatusBadge status={a.status} />}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
@@ -125,7 +144,16 @@ export default function BookingPage() {
 function BookingPanel({ asset }: { asset: Asset }) {
   const qc = useQueryClient();
   const { user, can } = useAuth();
+  const { data: departments = [] } = useDepartments();
   const canManageBookings = can(['ADMIN', 'ASSET_MANAGER']);
+  const isDeptHead = user?.role === 'DEPARTMENT_HEAD';
+  const blocked = isBookingBlocked(asset);
+  const deptHeadDepartments = useMemo(() => {
+    if (!isDeptHead || !user) return [];
+    return departments.filter((d) => d.id === user.departmentId || d.head?.id === user.id);
+  }, [departments, isDeptHead, user]);
+  const [bookForDept, setBookForDept] = useState(false);
+  const [departmentId, setDepartmentId] = useState(user?.departmentId ?? '');
   const now = new Date();
   const today = todayLocal();
   const [date, setDate] = useState(today);
@@ -141,8 +169,8 @@ function BookingPanel({ asset }: { asset: Asset }) {
 
   const minStart = minStartTime(date, today, now);
   const validationError = useMemo(
-    () => validateSelection(date, today, new Date(), start, end, dayBookings),
-    [date, today, start, end, dayBookings],
+    () => (blocked ? 'Cannot book — this resource is not available' : validateSelection(date, today, new Date(), start, end, dayBookings)),
+    [blocked, date, today, start, end, dayBookings],
   );
 
   const startDt = parseTimeOnDate(date, start);
@@ -156,6 +184,7 @@ function BookingPanel({ asset }: { asset: Asset }) {
         assetId: asset.id,
         startTime: toApiDateTime(date, start),
         endTime: toApiDateTime(date, end),
+        ...(bookForDept && departmentId ? { departmentId } : {}),
       },
     }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['bookings', asset.id] }); toast('Your booking has been confirmed.', 'success', { title: 'Booking confirmed' }); },
@@ -201,6 +230,7 @@ function BookingPanel({ asset }: { asset: Asset }) {
   }
 
   function handleTimelineClick(event: MouseEvent<HTMLDivElement>) {
+    if (blocked) return;
     const rect = event.currentTarget.getBoundingClientRect();
     const x = Math.max(0, Math.min(TIMELINE_WIDTH_PX, event.clientX - rect.left));
     const clickedMin = (x / TIMELINE_WIDTH_PX) * DAY_SPAN_MIN;
@@ -232,117 +262,158 @@ function BookingPanel({ asset }: { asset: Asset }) {
             <p className="font-mono text-xs text-accent-soft">{asset.assetTag}</p>
             <h3 className="text-lg font-semibold text-white">{asset.name}</h3>
           </div>
-          <input className="input max-w-[180px]" type="date" min={today} value={date} onChange={(e) => handleDateChange(e.target.value)} />
-        </div>
-
-        <p className="mb-3 text-xs text-slate-500">Scroll the timeline to explore the full day. Click the bar to set a start time, then adjust end time below.</p>
-
-        <div ref={timelineScrollRef} className="timeline-scroll -mx-1 overflow-x-auto px-1 pb-2">
-          <div style={{ width: TIMELINE_WIDTH_PX }}>
-            <div className="relative mb-1 flex text-[10px] text-slate-500">
-              {HOUR_LABELS.map((h) => (
-                <span key={h} className="shrink-0 text-center" style={{ width: TIMELINE_WIDTH_PX / 24 }}>
-                  {h === 24 ? '24:00' : `${pad(h)}:00`}
-                </span>
-              ))}
-            </div>
-
-            <div
-              role="presentation"
-              onClick={handleTimelineClick}
-              className="relative h-28 cursor-crosshair overflow-hidden rounded-xl border border-ink-700 bg-ink-900/60"
-              style={{ width: TIMELINE_WIDTH_PX }}
-            >
-              {Array.from({ length: 24 }, (_, h) => (
-                <div
-                  key={h}
-                  className="pointer-events-none absolute inset-y-0 border-l border-ink-700/30"
-                  style={{ left: toTimelinePx(h * 60) }}
-                />
-              ))}
-
-              {nowMin != null && nowMin > 0 && (
-                <div className="pointer-events-none absolute inset-y-0 left-0 bg-ink-950/70" style={{ width: toTimelinePx(nowMin) }} />
-              )}
-
-              {dayBookings.map((b) => {
-                const bs = new Date(b.startTime);
-                const be = new Date(b.endTime);
-                const sm = minutesOfDay(bs);
-                const em = Math.min(DAY_END_MIN, minutesOfDay(be));
-                const left = toTimelinePx(sm);
-                const width = Math.max(8, toTimelinePx(em) - left);
-                return (
-                  <div
-                    key={b.id}
-                    className="pointer-events-none absolute inset-y-2 rounded-md border border-amber-500/50 bg-amber-500/25 px-2 text-[11px] leading-4 text-amber-100"
-                    style={{ left, width }}
-                    title={`${b.bookedBy?.name ?? 'Booked'} · ${fmtTime(bs)}–${fmtTime(be)}`}
-                  >
-                    <span className="block truncate font-medium">{b.bookedBy?.name ?? 'Booked'}</span>
-                    <span className="block truncate opacity-80">{fmtTime(bs)}–{fmtTime(be)}</span>
-                  </div>
-                );
-              })}
-
-              {!validationError && (
-                <div
-                  className="pointer-events-none absolute inset-y-2 rounded-md border-2 border-accent bg-accent/25"
-                  style={{
-                    left: toTimelinePx(minutesOfDay(startDt)),
-                    width: Math.max(8, toTimelinePx(minutesOfDay(endDt)) - toTimelinePx(minutesOfDay(startDt))),
-                  }}
-                />
-              )}
-
-              {nowMin != null && nowMin >= 0 && nowMin <= DAY_END_MIN && (
-                <div className="pointer-events-none absolute inset-y-0 z-10 w-0.5 bg-rose-400" style={{ left: toTimelinePx(nowMin) }} title="Now" />
-              )}
-            </div>
+          <div className="flex items-center gap-3">
+            <StatusBadge status={asset.status} />
+            <input
+              className="input max-w-[180px]"
+              type="date"
+              min={today}
+              value={date}
+              onChange={(e) => handleDateChange(e.target.value)}
+              disabled={blocked}
+            />
           </div>
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-4 text-xs text-slate-500">
-          <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border border-amber-500/50 bg-amber-500/25" /> Booked</span>
-          <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border-2 border-accent bg-accent/25" /> Your selection</span>
-          <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-0.5 bg-rose-400" /> Now</span>
-        </div>
+        {blocked ? (
+          <div className="rounded-lg border border-orange-500/40 bg-orange-500/10 px-4 py-8 text-center">
+            <p className="text-sm font-medium text-orange-200">
+              {asset.status === 'UNDER_MAINTENANCE'
+                ? 'Cannot book — this resource is under maintenance'
+                : 'Cannot book — this resource is not available'}
+            </p>
+            <p className="mt-1 text-xs text-orange-300/80">
+              Booking will be available again once maintenance is resolved and the asset returns to Available.
+            </p>
+          </div>
+        ) : (
+          <>
+            <p className="mb-3 text-xs text-slate-500">Scroll the timeline to explore the full day. Click the bar to set a start time, then adjust end time below.</p>
+
+            <div ref={timelineScrollRef} className="timeline-scroll -mx-1 overflow-x-auto px-1 pb-2">
+              <div style={{ width: TIMELINE_WIDTH_PX }}>
+                <div className="relative mb-1 flex text-[10px] text-slate-500">
+                  {HOUR_LABELS.map((h) => (
+                    <span key={h} className="shrink-0 text-center" style={{ width: TIMELINE_WIDTH_PX / 24 }}>
+                      {h === 24 ? '24:00' : `${pad(h)}:00`}
+                    </span>
+                  ))}
+                </div>
+
+                <div
+                  role="presentation"
+                  onClick={handleTimelineClick}
+                  className="relative h-28 cursor-crosshair overflow-hidden rounded-xl border border-ink-700 bg-ink-900/60"
+                  style={{ width: TIMELINE_WIDTH_PX }}
+                >
+                  {Array.from({ length: 24 }, (_, h) => (
+                    <div
+                      key={h}
+                      className="pointer-events-none absolute inset-y-0 border-l border-ink-700/30"
+                      style={{ left: toTimelinePx(h * 60) }}
+                    />
+                  ))}
+
+                  {nowMin != null && nowMin > 0 && (
+                    <div className="pointer-events-none absolute inset-y-0 left-0 bg-ink-950/70" style={{ width: toTimelinePx(nowMin) }} />
+                  )}
+
+                  {dayBookings.map((b) => {
+                    const bs = new Date(b.startTime);
+                    const be = new Date(b.endTime);
+                    const sm = minutesOfDay(bs);
+                    const em = Math.min(DAY_END_MIN, minutesOfDay(be));
+                    const left = toTimelinePx(sm);
+                    const width = Math.max(8, toTimelinePx(em) - left);
+                    return (
+                      <div
+                        key={b.id}
+                        className="pointer-events-none absolute inset-y-2 rounded-md border border-amber-500/50 bg-amber-500/25 px-2 text-[11px] leading-4 text-amber-100"
+                        style={{ left, width }}
+                        title={`${b.bookedBy?.name ?? 'Booked'} · ${fmtTime(bs)}–${fmtTime(be)}`}
+                      >
+                        <span className="block truncate font-medium">{b.bookedBy?.name ?? 'Booked'}</span>
+                        <span className="block truncate opacity-80">{fmtTime(bs)}–{fmtTime(be)}</span>
+                      </div>
+                    );
+                  })}
+
+                  {!validationError && (
+                    <div
+                      className="pointer-events-none absolute inset-y-2 rounded-md border-2 border-accent bg-accent/25"
+                      style={{
+                        left: toTimelinePx(minutesOfDay(startDt)),
+                        width: Math.max(8, toTimelinePx(minutesOfDay(endDt)) - toTimelinePx(minutesOfDay(startDt))),
+                      }}
+                    />
+                  )}
+
+                  {nowMin != null && nowMin >= 0 && nowMin <= DAY_END_MIN && (
+                    <div className="pointer-events-none absolute inset-y-0 z-10 w-0.5 bg-rose-400" style={{ left: toTimelinePx(nowMin) }} title="Now" />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-4 text-xs text-slate-500">
+              <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border border-amber-500/50 bg-amber-500/25" /> Booked</span>
+              <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border-2 border-accent bg-accent/25" /> Your selection</span>
+              <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-0.5 bg-rose-400" /> Now</span>
+            </div>
+          </>
+        )}
       </div>
 
-      <div className="card p-5">
-        <h4 className="mb-3 text-sm font-semibold text-white">Book a slot</h4>
-        <div className="flex flex-wrap items-end gap-3">
-          <Field label="Start">
-            <input
-              className="input max-w-[140px]"
-              type="time"
-              step={60}
-              min={minStart}
-              max="23:59"
-              value={start}
-              onChange={(e) => handleStartChange(e.target.value)}
-            />
-          </Field>
-          <Field label="End">
-            <input
-              className="input max-w-[140px]"
-              type="time"
-              step={60}
-              min={start}
-              max="23:59"
-              value={end}
-              onChange={(e) => handleEndChange(e.target.value)}
-            />
-          </Field>
-          <button className="btn-primary" disabled={create.isPending || !!validationError} onClick={() => create.mutate()}>
-            Book slot
-          </button>
+      {!blocked && (
+        <div className="card p-5">
+          <h4 className="mb-3 text-sm font-semibold text-white">Book a slot</h4>
+          {isDeptHead && (
+            <div className="mb-3 flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-2 text-sm text-slate-300">
+                <input type="checkbox" checked={bookForDept} onChange={(e) => setBookForDept(e.target.checked)} />
+                Book on behalf of department
+              </label>
+              {bookForDept && (
+                <select className="input max-w-[220px]" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}>
+                  <option value="">Select department…</option>
+                  {deptHeadDepartments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                </select>
+              )}
+            </div>
+          )}
+          <div className="flex flex-wrap items-end gap-3">
+            <Field label="Start">
+              <input
+                className="input max-w-[140px]"
+                type="time"
+                step={60}
+                min={minStart}
+                max="23:59"
+                value={start}
+                onChange={(e) => handleStartChange(e.target.value)}
+              />
+            </Field>
+            <Field label="End">
+              <input
+                className="input max-w-[140px]"
+                type="time"
+                step={60}
+                min={start}
+                max="23:59"
+                value={end}
+                onChange={(e) => handleEndChange(e.target.value)}
+              />
+            </Field>
+            <button className="btn-primary" disabled={create.isPending || !!validationError || (bookForDept && !departmentId)} onClick={() => create.mutate()}>
+              Book slot
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-slate-500">
+            Pick any minute through the full day — e.g. 2:15 AM to 11:45 PM ({Math.round(selectionDurationMin)} min selected).
+          </p>
+          {validationError && <p className="mt-1 text-xs text-rose-300">{validationError}</p>}
         </div>
-        <p className="mt-2 text-xs text-slate-500">
-          Pick any minute through the full day — e.g. 2:15 AM to 11:45 PM ({Math.round(selectionDurationMin)} min selected).
-        </p>
-        {validationError && <p className="mt-1 text-xs text-rose-300">{validationError}</p>}
-      </div>
+      )}
 
       <div className="card p-5">
         <h4 className="mb-3 text-sm font-semibold text-white">Bookings</h4>

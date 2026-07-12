@@ -89,11 +89,29 @@ async function main() {
   await prisma.allocation.create({ data: { assetId: chair.id, employeeId: raj.id, status: 'ACTIVE', expectedReturnDate: new Date(Date.now() - 2 * 86400000) } });
   await prisma.asset.update({ where: { id: chair.id }, data: { status: 'ALLOCATED' } });
 
-  // A booking on Room B2 (9:00–10:00 today) to demo overlap validation.
+  // Bookings for overlap validation + heatmap peak windows.
   const today = new Date();
-  const nineAm = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 9, 0, 0);
-  const tenAm = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 10, 0, 0);
-  await prisma.booking.create({ data: { assetId: roomB2.id, bookedById: head.id, startTime: nineAm, endTime: tenAm, status: 'UPCOMING' } });
+  const at = (dayOffset: number, hour: number, durationHrs = 1) => {
+    const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() + dayOffset, hour, 0, 0);
+    const end = new Date(start.getTime() + durationHrs * 3600000);
+    return { start, end };
+  };
+  const bookingSeeds: { assetId: string; bookedById: string; dayOffset: number; hour: number; status: 'UPCOMING' | 'COMPLETED' }[] = [
+    { assetId: roomB2.id, bookedById: head.id, dayOffset: 0, hour: 9, status: 'UPCOMING' },
+    { assetId: roomB2.id, bookedById: priya.id, dayOffset: -1, hour: 10, status: 'COMPLETED' },
+    { assetId: roomB2.id, bookedById: raj.id, dayOffset: -1, hour: 14, status: 'COMPLETED' },
+    { assetId: roomB2.id, bookedById: head.id, dayOffset: -2, hour: 9, status: 'COMPLETED' },
+    { assetId: roomB2.id, bookedById: manager.id, dayOffset: -3, hour: 11, status: 'COMPLETED' },
+    { assetId: van.id, bookedById: manager.id, dayOffset: -2, hour: 8, status: 'COMPLETED' },
+    { assetId: van.id, bookedById: raj.id, dayOffset: -4, hour: 15, status: 'COMPLETED' },
+    { assetId: van.id, bookedById: priya.id, dayOffset: 1, hour: 9, status: 'UPCOMING' },
+  ];
+  for (const b of bookingSeeds) {
+    const { start, end } = at(b.dayOffset, b.hour);
+    await prisma.booking.create({
+      data: { assetId: b.assetId, bookedById: b.bookedById, startTime: start, endTime: end, status: b.status },
+    });
+  }
 
   // A pending maintenance request.
   await prisma.maintenanceRequest.create({ data: { assetId: monitor.id, raisedById: priya.id, issue: 'Screen flickering intermittently', priority: 'HIGH', status: 'PENDING' } });

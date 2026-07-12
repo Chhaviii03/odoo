@@ -22,15 +22,21 @@ export default function AuditPage() {
           <div className="border-b border-ink-700 px-4 py-3 text-sm font-semibold text-white">Audit Cycles</div>
           {isLoading ? <Spinner /> : !cycles?.length ? <EmptyState title="No audit cycles" /> : (
             <div className="divide-y divide-ink-800">
-              {cycles.map((c) => (
-                <button key={c.id} onClick={() => setSelectedId(c.id)} className={`flex w-full items-center justify-between px-4 py-3 text-left hover:bg-ink-800/50 ${selectedId === c.id ? 'bg-ink-800' : ''}`}>
-                  <div>
-                    <p className="text-sm font-medium text-slate-100">{c.name}</p>
-                    <p className="text-xs text-slate-500">{fmtDate(c.startDate)} – {fmtDate(c.endDate)} · {c._count?.items ?? 0} items</p>
-                  </div>
-                  <StatusBadge status={c.status} />
-                </button>
-              ))}
+              {cycles.map((c) => {
+                const auditors = (c.assignments ?? []).map((a: any) => a.auditor?.name).filter(Boolean);
+                return (
+                  <button key={c.id} onClick={() => setSelectedId(c.id)} className={`flex w-full items-start justify-between gap-2 px-4 py-3 text-left hover:bg-ink-800/50 ${selectedId === c.id ? 'bg-ink-800' : ''}`}>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-100">{c.name}</p>
+                      <p className="text-xs text-slate-500">{fmtDate(c.startDate)} – {fmtDate(c.endDate)} · {c._count?.items ?? 0} items</p>
+                      <p className="mt-0.5 truncate text-xs text-slate-500">
+                        {auditors.length ? `Auditors: ${auditors.join(', ')}` : 'No auditors assigned'}
+                      </p>
+                    </div>
+                    <StatusBadge status={c.status} />
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
@@ -45,10 +51,14 @@ export default function AuditPage() {
 
 function CycleDetail({ cycleId, canManage }: { cycleId: string; canManage: boolean }) {
   const qc = useQueryClient();
+  const { user } = useAuth();
   const { data: items, isLoading } = useQuery({ queryKey: ['audit-items', cycleId], queryFn: () => api<any[]>(`/audit-cycles/${cycleId}/items`) });
   const { data: cycles } = useQuery({ queryKey: ['audit-cycles'], queryFn: () => api<any[]>('/audit-cycles') });
   const cycle = cycles?.find((c) => c.id === cycleId);
   const closed = cycle?.status === 'CLOSED';
+  const auditors = (cycle?.assignments ?? []).map((a: any) => a.auditor).filter(Boolean);
+  const isAssigned = auditors.some((a: any) => a.id === user?.id);
+  const canVerify = canManage || isAssigned;
 
   const verify = useMutation({
     mutationFn: (p: { id: string; status: string }) => api(`/audit-items/${p.id}/verify`, { method: 'PATCH', body: { verificationStatus: p.status } }),
@@ -68,6 +78,22 @@ function CycleDetail({ cycleId, canManage }: { cycleId: string; canManage: boole
 
   return (
     <div className="space-y-4">
+      {cycle && (
+        <div className="card flex flex-wrap items-center justify-between gap-2 p-4">
+          <div>
+            <p className="text-sm font-semibold text-white">{cycle.name}</p>
+            <p className="mt-0.5 text-xs text-slate-400">
+              Auditors: {auditors.length ? auditors.map((a: any) => a.name).join(', ') : <span className="text-slate-500">none assigned</span>}
+            </p>
+          </div>
+          {!closed && !canVerify && (
+            <span className="rounded-lg border border-ink-600 bg-ink-800 px-3 py-1 text-xs text-slate-400">
+              View only — you are not an assigned auditor
+            </span>
+          )}
+        </div>
+      )}
+
       {discrepancies.length > 0 && (
         <div className="card border-orange-500/40 bg-orange-500/10 p-4">
           <p className="text-sm font-semibold text-orange-200">Discrepancy report — {discrepancies.length} flagged item{discrepancies.length > 1 ? 's' : ''} (auto-generated)</p>
@@ -93,7 +119,7 @@ function CycleDetail({ cycleId, canManage }: { cycleId: string; canManage: boole
                 <td className="td text-slate-400">{i.expectedLocation ?? '—'}</td>
                 <td className="td"><StatusBadge status={i.verificationStatus} /></td>
                 <td className="td">
-                  {!closed ? (
+                  {!closed && canVerify ? (
                     <div className="flex gap-1">
                       {['VERIFIED', 'MISSING', 'DAMAGED'].map((s) => (
                         <button key={s} className="btn-ghost px-2 py-1 text-xs" onClick={() => verify.mutate({ id: i.id, status: s })}>{s[0] + s.slice(1).toLowerCase()}</button>

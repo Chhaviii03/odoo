@@ -45,7 +45,9 @@ assetsRouter.post(
 assetsRouter.get(
   '/:id/allocations',
   asyncHandler(async (req, res) => {
-    await assetsService.ensureVisible(req.params.id, viewerFrom(req));
+    // Allocation screen lets employees discover held assets for transfer —
+    // history must use the same broader visibility as ?context=allocation.
+    await assetsService.ensureVisible(req.params.id, viewerFrom(req), { allocationContext: true });
     res.json(await allocationsService.listForAsset(req.params.id));
   }),
 );

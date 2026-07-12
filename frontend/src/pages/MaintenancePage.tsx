@@ -5,14 +5,22 @@ import { PageHeader, StatusBadge, Modal, Field, Spinner } from '../components/ui
 import { toast } from '../lib/toast';
 import { useAuth } from '../lib/auth';
 import { useAssets } from '../features/queries';
+import { fmtDate } from '../lib/format';
 
 const COLUMNS: { status: string; label: string }[] = [
   { status: 'PENDING', label: 'Pending' },
   { status: 'APPROVED', label: 'Approved' },
-  { status: 'TECHNICIAN_ASSIGNED', label: 'Technician Assigned' },
-  { status: 'IN_PROGRESS', label: 'In Progress' },
+  { status: 'TECHNICIAN_ASSIGNED', label: 'Technician assigned' },
+  { status: 'IN_PROGRESS', label: 'In progress' },
   { status: 'RESOLVED', label: 'Resolved' },
 ];
+
+async function uploadFile(file: File): Promise<string> {
+  const fd = new FormData();
+  fd.append('file', file);
+  const res = await api<{ url: string }>('/uploads', { method: 'POST', body: fd });
+  return res.url;
+}
 
 export default function MaintenancePage() {
   const { can } = useAuth();
@@ -32,54 +40,147 @@ export default function MaintenancePage() {
     switch (status) {
       case 'PENDING':
         return (
-          <div className="mt-2 flex gap-1">
-            <button className="btn-primary px-2 py-1 text-xs" onClick={() => act.mutate({ id, action: 'approve' })}>Approve</button>
-            <button className="btn-ghost px-2 py-1 text-xs" onClick={() => act.mutate({ id, action: 'reject' })}>Reject</button>
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              className="btn-primary flex-1 px-2 py-1.5 text-xs"
+              disabled={act.isPending}
+              onClick={() => act.mutate({ id, action: 'approve' })}
+            >
+              Approve
+            </button>
+            <button
+              type="button"
+              className="flex-1 rounded-lg border border-rose-500/40 bg-rose-500/10 px-2 py-1.5 text-xs font-medium text-rose-300 hover:bg-rose-500/20"
+              disabled={act.isPending}
+              onClick={() => act.mutate({ id, action: 'reject' })}
+            >
+              Reject
+            </button>
           </div>
         );
       case 'APPROVED':
-        return <button className="btn-ghost mt-2 px-2 py-1 text-xs" onClick={() => { const name = prompt('Technician name?'); if (name) act.mutate({ id, action: 'assign-technician', body: { technicianName: name } }); }}>Assign Technician</button>;
+        return (
+          <button
+            type="button"
+            className="btn-ghost mt-3 w-full px-2 py-1.5 text-xs"
+            disabled={act.isPending}
+            onClick={() => {
+              const name = prompt('Technician name?');
+              if (name) act.mutate({ id, action: 'assign-technician', body: { technicianName: name } });
+            }}
+          >
+            Assign Technician
+          </button>
+        );
       case 'TECHNICIAN_ASSIGNED':
-        return <button className="btn-ghost mt-2 px-2 py-1 text-xs" onClick={() => act.mutate({ id, action: 'start' })}>Start Work</button>;
+        return (
+          <button
+            type="button"
+            className="btn-ghost mt-3 w-full px-2 py-1.5 text-xs"
+            disabled={act.isPending}
+            onClick={() => act.mutate({ id, action: 'start' })}
+          >
+            Start Work
+          </button>
+        );
       case 'IN_PROGRESS':
-        return <button className="btn-primary mt-2 px-2 py-1 text-xs" onClick={() => act.mutate({ id, action: 'resolve', body: { notes: 'Repaired' } })}>Resolve</button>;
+        return (
+          <button
+            type="button"
+            className="btn-primary mt-3 w-full px-2 py-1.5 text-xs"
+            disabled={act.isPending}
+            onClick={() => act.mutate({ id, action: 'resolve', body: { notes: 'Repaired' } })}
+          >
+            Resolve
+          </button>
+        );
       default:
         return null;
     }
   }
 
-  return (
-    <div>
-      <PageHeader title="Maintenance Management" subtitle="Route repairs through approval before work starts" actions={<button className="btn-primary" onClick={() => setRaiseOpen(true)}>+ Raise Request</button>} />
+  function cardSummary(r: any) {
+    const tag = r.asset?.assetTag ?? '—';
+    const issue = r.issue ?? '';
+    if (r.status === 'TECHNICIAN_ASSIGNED' && r.technicianName) {
+      return `${tag} · ${r.asset?.name ?? ''} · tech: ${r.technicianName}`;
+    }
+    if (r.status === 'RESOLVED') {
+      return `${tag} · ${issue}${r.resolvedAt ? ` · resolved ${fmtDate(r.resolvedAt)}` : ''}`;
+    }
+    return `${tag} · ${issue}`;
+  }
 
-      {isLoading ? <Spinner /> : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-5">
-          {COLUMNS.map((col) => {
-            const items = requests?.filter((r) => r.status === col.status) ?? [];
-            return (
-              <div key={col.status} className="card p-3">
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-white">{col.label}</h3>
-                  <span className="rounded-full bg-ink-700 px-2 text-xs text-slate-400">{items.length}</span>
-                </div>
-                <div className="space-y-2">
-                  {items.map((r) => (
-                    <div key={r.id} className="rounded-lg border border-ink-700 bg-ink-800/60 p-3">
-                      <div className="flex items-center justify-between">
-                        <span className="font-mono text-xs text-accent-soft">{r.asset?.assetTag}</span>
-                        <StatusBadge status={r.priority} />
-                      </div>
-                      <p className="mt-1 text-sm text-slate-200">{r.asset?.name}</p>
-                      <p className="mt-1 text-xs text-slate-400">{r.issue}</p>
-                      {r.technicianName && <p className="mt-1 text-xs text-indigo-300">Tech: {r.technicianName}</p>}
-                      {nextAction(r.status, r.id)}
+  return (
+    <div className="-m-6 flex h-[calc(100dvh-3.5rem)] flex-col">
+      <div className="shrink-0 px-6 pt-6">
+        <PageHeader
+          title="Maintenance Management"
+          subtitle="Route repairs through approval before work starts"
+          actions={<button className="btn-primary" onClick={() => setRaiseOpen(true)}>+ Raise Request</button>}
+        />
+      </div>
+
+      {isLoading ? (
+        <div className="px-6"><Spinner /></div>
+      ) : (
+        <div className="mx-6 mb-6 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-ink-600 bg-ink-900">
+          <div className="grid min-h-0 flex-1 grid-cols-1 divide-y divide-ink-600 overflow-hidden md:grid-cols-3 md:divide-x md:divide-y-0 xl:grid-cols-5">
+            {COLUMNS.map((col) => {
+              const items = requests?.filter((r) => r.status === col.status) ?? [];
+              return (
+                <div key={col.status} className="flex min-h-0 min-w-0 flex-col">
+                  <div className="shrink-0 border-b border-ink-700 px-3 py-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="text-sm font-semibold text-white">{col.label}</h3>
+                      <span className="rounded-full bg-ink-800 px-2 py-0.5 text-xs text-slate-400">{items.length}</span>
                     </div>
-                  ))}
-                  {items.length === 0 && <p className="py-4 text-center text-xs text-slate-600">Empty</p>}
+                  </div>
+                  <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3">
+                    {items.map((r) => {
+                      const resolved = r.status === 'RESOLVED';
+                      return (
+                        <div
+                          key={r.id}
+                          className={`shrink-0 rounded-lg border p-3 ${
+                            resolved
+                              ? 'border-emerald-500/50 bg-emerald-500/10'
+                              : 'border-ink-600 bg-ink-950/40'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-sm leading-snug text-slate-100">{cardSummary(r)}</p>
+                            <StatusBadge status={r.priority} />
+                          </div>
+                          {r.photoUrl && (
+                            <a href={r.photoUrl} target="_blank" rel="noreferrer" className="mt-2 block">
+                              <img
+                                src={r.photoUrl}
+                                alt="Issue"
+                                className="h-16 w-full rounded-md border border-ink-600 object-cover"
+                              />
+                            </a>
+                          )}
+                          {r.raisedBy?.name && (
+                            <p className="mt-2 text-[11px] text-slate-500">Raised by {r.raisedBy.name}</p>
+                          )}
+                          {nextAction(r.status, r.id)}
+                        </div>
+                      );
+                    })}
+                    {items.length === 0 && (
+                      <p className="py-8 text-center text-xs text-slate-600">No requests</p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+          <div className="shrink-0 border-t border-ink-700 px-4 py-3 text-xs text-slate-500">
+            Approving a card moves the asset to under maintenance; resolving returns it to available.
+            {canApprove && ' Admins and Asset Managers can approve or reject pending requests.'}
+          </div>
         </div>
       )}
 
@@ -94,12 +195,38 @@ function RaiseModal({ onClose }: { onClose: () => void }) {
   const [assetId, setAssetId] = useState('');
   const [issue, setIssue] = useState('');
   const [priority, setPriority] = useState('MEDIUM');
+  const [photoUrl, setPhotoUrl] = useState<string | undefined>();
+  const [uploading, setUploading] = useState(false);
 
   const create = useMutation({
-    mutationFn: () => api('/maintenance-requests', { method: 'POST', body: { assetId, issue, priority } }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['maintenance'] }); toast('Maintenance request raised', 'success'); onClose(); },
+    mutationFn: () =>
+      api('/maintenance-requests', {
+        method: 'POST',
+        body: { assetId, issue, priority, photoUrl },
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['maintenance'] });
+      toast('Maintenance request raised', 'success');
+      onClose();
+    },
     onError: (e) => toast(e instanceof ApiError ? e.message : 'Failed', 'error'),
   });
+
+  async function onPhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const url = await uploadFile(file);
+      setPhotoUrl(url);
+      toast('Photo attached', 'success');
+    } catch (err) {
+      toast(err instanceof ApiError ? err.message : 'Photo upload failed', 'error');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  }
 
   return (
     <Modal open onClose={onClose} title="Raise Maintenance Request">
@@ -107,16 +234,54 @@ function RaiseModal({ onClose }: { onClose: () => void }) {
         <Field label="Asset">
           <select className="input" value={assetId} onChange={(e) => setAssetId(e.target.value)}>
             <option value="">Select…</option>
-            {assets.map((a) => <option key={a.id} value={a.id}>{a.assetTag} · {a.name}</option>)}
+            {assets.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.assetTag} · {a.name}
+              </option>
+            ))}
           </select>
         </Field>
-        <Field label="Issue"><textarea className="input h-24" value={issue} onChange={(e) => setIssue(e.target.value)} /></Field>
-        <Field label="Priority">
-          <select className="input" value={priority} onChange={(e) => setPriority(e.target.value)}>
-            {['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map((p) => <option key={p} value={p}>{p}</option>)}
-          </select>
+        <Field label="Issue">
+          <textarea className="input h-24" value={issue} onChange={(e) => setIssue(e.target.value)} placeholder="Describe the problem…" />
         </Field>
-        <button className="btn-primary w-full" disabled={!assetId || !issue || create.isPending} onClick={() => create.mutate()}>Submit</button>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Priority">
+            <select className="input" value={priority} onChange={(e) => setPriority(e.target.value)}>
+              {['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Attach Photo">
+            <input
+              className="input file:mr-3 file:rounded file:border-0 file:bg-ink-700 file:px-2 file:py-1 file:text-xs file:text-slate-200"
+              type="file"
+              accept="image/*"
+              onChange={onPhotoChange}
+              disabled={uploading}
+            />
+          </Field>
+        </div>
+        {photoUrl && (
+          <div className="flex items-center gap-3 rounded-lg border border-ink-700 bg-ink-800/40 p-2">
+            <img src={photoUrl} alt="Issue preview" className="h-16 w-16 rounded-md border border-ink-600 object-cover" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs text-slate-400">{photoUrl}</p>
+              <button type="button" className="mt-1 text-xs text-rose-300 hover:underline" onClick={() => setPhotoUrl(undefined)}>
+                Remove photo
+              </button>
+            </div>
+          </div>
+        )}
+        <button
+          className="btn-primary w-full"
+          disabled={!assetId || !issue || uploading || create.isPending}
+          onClick={() => create.mutate()}
+        >
+          {uploading ? 'Uploading…' : create.isPending ? 'Submitting…' : 'Submit'}
+        </button>
       </div>
     </Modal>
   );
